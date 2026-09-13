@@ -1,0 +1,1045 @@
+<title>Mieterstrom bei GWL-Design — so funktioniert's</title>
+<style>
+  /* GWL-Design: verbindliches dunkles Theme (nicht adaptiv, siehe Frontend-Vorgaben) */
+  :root{
+    --bg:#0D1117;
+    --surface:#161B22;
+    --surface-hover:#1C222B;
+    --border:#30363D;
+    --text:#F0F6FC;
+    --text-secondary:#8B949E;
+    --gold:#E3A008;
+    --gold-soft:rgba(227,160,8,.13);
+    --gold-border:rgba(227,160,8,.45);
+    --green:#2DA44E;
+    --green-soft:rgba(45,164,78,.14);
+    --green-border:rgba(45,164,78,.45);
+    --sans:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    --mono:ui-monospace,'SF Mono','Cascadia Code','Menlo','Consolas',monospace;
+    --raster:5mm; /* 1 Rasterfeld, siehe Frontend-Vorgaben.md "Layout & Linien" */
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  html{background:var(--bg);}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:var(--sans);line-height:1.6;font-size:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--gold);}
+  .page{max-width:1180px;margin:0 auto;padding:0 24px;}
+
+  /* ---------- KOPFZEILE (Pflicht-Vorgabe, siehe Frontend-Vorgaben.md "Kopfzeile") ----------
+     Links Logo, mittig Slogan "GRID WITHOUT LIMITS", rechts Login — fix und in jedem
+     Frontend-Projekt identisch, kein projektspezifisches Abweichen. Logo-Box 9/2 Rasterfelder
+     (Breite/Höhe) laut "Layout & Linien". */
+  .gwl-header{border-bottom:1px solid var(--border);background:var(--bg);}
+  .gwl-header-grid{
+    max-width:1180px;margin:0 auto;padding:0 24px;min-height:64px;
+    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;
+  }
+  .gwl-logo-box{justify-self:start;height:calc(var(--raster)*2);width:calc(var(--raster)*9);display:flex;align-items:center;}
+  .gwl-logo-box img{height:100%;width:auto;display:block;}
+  .gwl-claim{
+    justify-self:center;font-size:15px;font-weight:700;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--text);white-space:nowrap;
+  }
+  .gwl-login-box{
+    justify-self:end;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--text);text-decoration:none;border:1px solid var(--border);border-radius:999px;
+    padding:8px 20px;transition:border-color .15s,color .15s;
+  }
+  .gwl-login-box:hover{border-color:var(--gold-border);color:var(--gold);}
+
+  /* Pflicht-Seitentitel direkt unter der Kopfzeile (Frontend-Vorgaben.md "Kopfzeile"):
+     zentriert auf der Symmetrieachse, volle Bildschirmbreite, 2 Rasterfelder hoch. */
+  .page-title-bar{
+    width:100%;min-height:calc(var(--raster)*2);border-bottom:1px solid var(--border);
+    background:var(--surface);display:flex;align-items:center;justify-content:center;
+    padding:8px 24px;
+  }
+  .page-title{margin:0;font-size:clamp(24px,4vw,38px);line-height:1;font-weight:800;letter-spacing:-0.01em;color:var(--text);}
+  h1,h2,h3{text-wrap:balance;margin:0;font-weight:800;letter-spacing:-0.01em;}
+  p{margin:0;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--mono);font-size:11.52px;font-weight:600;
+    text-transform:uppercase;letter-spacing:.14em;color:var(--gold);
+    background:var(--gold-soft);border:1px solid var(--gold-border);
+    padding:6px 14px;border-radius:999px;
+  }
+  .eyebrow.green{color:var(--green);background:var(--green-soft);border-color:var(--green-border);}
+
+  /* ---------- HERO ---------- */
+  header.hero{
+    position:relative;overflow:hidden;
+    padding:104px 0 88px;
+    background:
+      radial-gradient(circle at 82% 10%, rgba(227,160,8,.10), transparent 55%),
+      radial-gradient(circle at 8% 90%, rgba(45,164,78,.08), transparent 50%),
+      var(--bg);
+    border-bottom:1px solid var(--border);
+  }
+  header.hero::before{
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size:56px 56px;
+    -webkit-mask-image:linear-gradient(to bottom, black, transparent 75%);
+            mask-image:linear-gradient(to bottom, black, transparent 75%);
+    opacity:.18;
+  }
+  .hero-inner{position:relative;max-width:760px;}
+  h2.headline{font-size:clamp(33.6px,4.4vw,51.2px);line-height:1.12;margin-top:22px;}
+  .lede{margin-top:22px;font-size:18.24px;color:var(--text-secondary);max-width:62ch;}
+  .lede strong{color:var(--text);font-weight:600;}
+
+  .stat-strip{
+    margin-top:44px;display:flex;flex-wrap:wrap;gap:0;
+    border:1px solid var(--border);border-radius:var(--raster);overflow:hidden;background:var(--surface);
+  }
+  .stat{flex:1 1 160px;padding:20px 24px;border-right:1px solid var(--border);}
+  .stat:last-child{border-right:none;}
+  .stat .num{font-family:var(--mono);font-size:30.4px;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;}
+  .stat .num.text{font-size:18.4px;line-height:1.3;}
+  .stat .label{margin-top:4px;font-size:13.12px;color:var(--text-secondary);}
+  .stat-source{margin-top:10px;font-size:12.48px;color:var(--text-secondary);font-style:italic;}
+
+  /* ---------- SECTIONS ---------- */
+  section{padding:88px 0;border-bottom:1px solid var(--border);}
+  section:last-of-type{border-bottom:none;}
+  .section-head{max-width:640px;margin-bottom:48px;}
+  .section-head h2{font-size:clamp(24px,2.6vw,32px);}
+  .section-head p{margin-top:14px;color:var(--text-secondary);font-size:16.32px;}
+
+  /* value cards */
+  .value-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+  .value-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--raster);padding:26px;transition:transform .15s,border-color .15s;}
+  .value-card:hover{transform:translateY(-3px);border-color:var(--gold-border);}
+  .value-card svg.icon{color:var(--gold);}
+  .value-card h3{font-size:17.28px;margin-top:16px;}
+  .value-card p{margin-top:10px;color:var(--text-secondary);font-size:15.04px;}
+
+  .legend-row{display:flex;flex-wrap:wrap;gap:18px;margin-top:20px;font-size:13.44px;color:var(--text-secondary);}
+  .legend-row span{display:inline-flex;align-items:center;gap:8px;}
+  .swatch{width:13px;height:13px;border-radius:4px;display:inline-block;border:1px solid var(--border);}
+  .swatch.mid{background:var(--green-soft);border-color:var(--green);}
+  .swatch.ems{background:var(--gold-soft);border-color:var(--gold);}
+  .swatch.neutral{background:var(--surface-hover);border-color:var(--border);}
+
+  /* ---------- KONFIGURATOR ---------- */
+  .config-controls{
+    display:flex;flex-direction:column;gap:22px;
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--raster);
+    padding:24px 26px;margin-top:24px;
+  }
+  .field-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;}
+  .field{display:flex;flex-direction:column;gap:10px;}
+  .field-label{font-size:13.76px;font-weight:600;color:var(--text);}
+  .stepper{display:flex;align-items:center;border:1px solid var(--border);border-radius:var(--raster);overflow:hidden;background:var(--surface-hover);width:fit-content;}
+  .stepper[hidden]{display:none;}
+  .step-btn{width:34px;height:34px;border:none;background:transparent;color:var(--text-secondary);font-size:18.4px;font-weight:700;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;}
+  .step-btn:hover:not(:disabled){background:var(--gold-soft);color:var(--gold);}
+  .step-btn:focus-visible{outline:2px solid var(--gold);outline-offset:-2px;}
+  .step-btn:disabled{opacity:.35;cursor:not-allowed;}
+  .field-value{min-width:34px;text-align:center;font-family:var(--mono);font-weight:700;font-size:16.8px;color:var(--text);padding:0 4px;font-variant-numeric:tabular-nums;}
+  .btn-add{
+    width:fit-content;background:transparent;border:1px dashed var(--border);border-radius:var(--raster);
+    padding:8px 14px;font-size:13.12px;font-weight:600;color:var(--text-secondary);
+    cursor:pointer;transition:border-color .15s,color .15s,background .15s;
+  }
+  .btn-add:hover{border-color:var(--gold-border);color:var(--gold);background:var(--gold-soft);}
+  .btn-add:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+  .btn-toggle{
+    width:fit-content;background:transparent;border:1px solid var(--border);border-radius:var(--raster);
+    padding:8px 14px;font-size:13.12px;font-weight:600;color:var(--text-secondary);
+    cursor:pointer;transition:border-color .15s,color .15s,background .15s;
+  }
+  .btn-toggle:hover{border-color:var(--gold-border);}
+  .btn-toggle[aria-pressed="true"]{background:var(--gold-soft);border-color:var(--gold-border);color:var(--gold);}
+  .btn-toggle:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+  @media (max-width:900px){ .field-grid{grid-template-columns:repeat(3,1fr);} }
+  @media (max-width:760px){ .field-grid{grid-template-columns:1fr 1fr;} }
+  @media (max-width:480px){ .field-grid{grid-template-columns:1fr;} }
+  .config-stats{margin-top:20px;}
+  .config-note{margin-top:10px;}
+
+  .diagram-layout{display:grid;grid-template-columns:1fr 320px;gap:28px;margin-top:28px;align-items:start;}
+  .diagram-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:var(--raster);background:var(--surface);padding:20px 12px;}
+  .scroll-hint{display:none;font-size:12.48px;color:var(--text-secondary);margin:0 0 10px;font-style:italic;}
+  @media (max-width:760px){ .scroll-hint{display:block;} }
+  figure{margin:0;}
+  figcaption{margin-top:14px;padding:0 8px;font-size:13.76px;color:var(--text-secondary);}
+  svg.schema{display:block;margin:0 auto;}
+
+  .node .box{cursor:pointer;transition:stroke .15s,stroke-width .15s;}
+  .node:hover .box,.node:focus-visible .box{stroke:var(--gold);stroke-width:2.5;}
+  .node{outline:none;}
+  .node text{pointer-events:none;user-select:none;}
+
+  aside.detail-panel{
+    position:sticky;top:20px;background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--raster);padding:24px;min-height:280px;
+  }
+  aside.detail-panel h3{font-size:17.6px;}
+  aside.detail-panel .badges{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
+  .pill{
+    font-family:var(--mono);font-size:10.88px;font-weight:600;text-transform:uppercase;
+    letter-spacing:.08em;padding:4px 10px;border-radius:999px;border:1px solid;
+  }
+  .pill.mid{color:var(--green);background:var(--green-soft);border-color:var(--green-border);}
+  .pill.ems{color:var(--gold);background:var(--gold-soft);border-color:var(--gold-border);}
+  aside.detail-panel p{margin-top:14px;color:var(--text-secondary);font-size:15.04px;}
+  aside.detail-panel .hint{color:var(--text-secondary);font-size:15.04px;}
+
+  /* billing steps */
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
+  .step-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--raster);padding:22px;position:relative;transition:transform .15s,border-color .15s;}
+  .step-card:hover{transform:translateY(-3px);border-color:var(--gold-border);}
+  .step-card .step-no{font-family:var(--mono);font-size:12.48px;color:var(--gold);font-weight:700;letter-spacing:.05em;}
+  .step-card h3{font-size:16.32px;margin-top:10px;}
+  .step-card p{margin-top:8px;font-size:14.08px;color:var(--text-secondary);}
+
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:52px;}
+  .compare-col{border-radius:var(--raster);padding:26px 26px 22px;border:1px solid var(--border);background:var(--surface);}
+  .compare-col.win{border-color:var(--gold);background:linear-gradient(180deg,var(--gold-soft),var(--surface) 60%);}
+  .compare-col h4{font-size:12.48px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-secondary);font-weight:700;}
+  .compare-col.win h4{color:var(--gold);}
+  .compare-col ul{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:12px;}
+  .compare-col li{display:flex;gap:10px;align-items:flex-start;font-size:14.72px;color:var(--text-secondary);}
+  .compare-col.win li{color:var(--text);}
+  .compare-col svg.mark{flex:none;margin-top:2px;}
+
+  footer{padding:48px 0 64px;}
+  footer p{color:var(--text-secondary);font-size:13.76px;max-width:60ch;}
+  footer .brand{font-family:var(--mono);color:var(--text);font-weight:600;margin-bottom:8px;display:block;}
+
+  @media (max-width:860px){
+    .diagram-layout{grid-template-columns:1fr;}
+    aside.detail-panel{position:static;}
+    .value-grid{grid-template-columns:1fr;}
+    .steps{grid-template-columns:1fr 1fr;}
+    .compare{grid-template-columns:1fr;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important;animation:none !important;}
+  }
+
+  /* ---------- DEV-RASTER (nur vor Freigabe, siehe Frontend-Vorgaben) ---------- */
+  .dev-grid-overlay{
+    position:fixed;inset:0;z-index:9999;pointer-events:none;
+    background-image:
+      linear-gradient(rgba(227,160,8,.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(227,160,8,.18) 1px, transparent 1px);
+    background-size:5mm 5mm;
+  }
+  .dev-grid-overlay::after{
+    content:"";position:absolute;top:0;bottom:0;left:50%;width:1px;
+    background:rgba(45,164,78,.65);
+  }
+  .dev-grid-toggle{
+    position:fixed;right:14px;bottom:14px;z-index:10000;
+    font-family:var(--mono);font-size:11.52px;letter-spacing:.06em;
+    color:var(--text);background:var(--surface);border:1px solid var(--border);
+    border-radius:6px;padding:6px 10px;cursor:pointer;
+  }
+  .dev-grid-toggle:hover{background:var(--surface-hover);}
+</style>
+
+<!-- DEV-ONLY: Ausrichtungs-Raster (5mm) + Symmetrieachse nach Frontend-Vorgaben.
+     Vor dem Live-Gang diesen Block + den zugehörigen CSS-Abschnitt oben entfernen. -->
+<div class="dev-grid-overlay" id="devGridOverlay" aria-hidden="true"></div>
+<button type="button" class="dev-grid-toggle" id="devGridToggle">Raster: an</button>
+<script>
+(function(){
+  var overlay = document.getElementById('devGridOverlay');
+  var btn = document.getElementById('devGridToggle');
+  var on = true;
+  btn.addEventListener('click', function(){
+    on = !on;
+    overlay.style.display = on ? 'block' : 'none';
+    btn.textContent = 'Raster: ' + (on ? 'an' : 'aus');
+  });
+})();
+</script>
+
+<header class="gwl-header">
+  <div class="gwl-header-grid">
+    <a class="gwl-logo-box" href="../../index.html" aria-label="Zur GWL-Design Software-Übersicht">
+      <img src="assets/gwl-logo.svg" alt="GWL-Design">
+    </a>
+    <div class="gwl-claim">Grid Without Limits</div>
+    <a class="gwl-login-box" href="#">Login</a>
+  </div>
+</header>
+<div class="page-title-bar">
+  <h1 class="page-title">Mieterstrom</h1>
+</div>
+
+<header class="hero">
+  <div class="page hero-inner">
+    <span class="eyebrow">Mieterstrom · so funktioniert's</span>
+    <h2 class="headline">Der Strom vom eigenen Dach bleibt im Haus.</h2>
+    <p class="lede">
+      Diese Seite zeigt, wie eine Mieterstromanlage nach den GWL-Regeln aufgebaut ist —
+      und warum die Abrechnung dabei kein Aufwand mehr ist: <strong>MID-geeichte Zähler</strong>
+      (also amtlich geprüfte Messgeräte, wie man sie vom eigenen Stromzähler zu Hause kennt)
+      erfassen jede Wohnung einzeln, und der Energiemanager <strong>PlexLog</strong> sammelt
+      alle Werte automatisch für die Abrechnung.
+    </p>
+
+    <div class="stat-strip">
+      <div class="stat"><div class="num">15</div><div class="label">Messpunkte im Beispielprojekt</div></div>
+      <div class="stat"><div class="num">11</div><div class="label">Mieterzähler, je Wohnung einer</div></div>
+      <div class="stat"><div class="num">1</div><div class="label">Energiemanager: PlexLog</div></div>
+    </div>
+    <p class="stat-source">Beispiel aus einem realen GWL-Projekt (Mehrfamilienhaus, 7 Wohnungen + Nebenräume).</p>
+  </div>
+</header>
+
+<main>
+  <!-- ================= WAS IST MIETERSTROM ================= -->
+  <section id="was-ist">
+    <div class="page">
+      <div class="section-head">
+        <span class="eyebrow green">Das Prinzip</span>
+        <h2 style="margin-top:14px;">Was ist Mieterstrom?</h2>
+        <p>
+          Statt den Solarstrom vom Dach nur ins öffentliche Netz einzuspeisen, wird er zuerst
+          im eigenen Haus verbraucht — von den Mietern und vom Eigentümer. Nur der Überschuss
+          geht ins Netz, fehlender Strom kommt weiterhin ganz normal vom Netzbetreiber. Damit
+          das fair und rechtssicher funktioniert, braucht jede Verbrauchsstelle einen eigenen
+          geeichten Zähler.
+        </p>
+      </div>
+
+      <div class="value-grid">
+        <div class="value-card">
+          <svg class="icon" width="40" height="40" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Haussymbol mit Pfeil, der Energie ins Haus zurückführt">
+            <polygon points="24,6 6,23 42,23"/>
+            <rect x="10" y="23" width="28" height="18" rx="2"/>
+            <line x1="24" y1="16" x2="24" y2="34" marker-end="url(#arrIcon)"/>
+            <defs>
+              <marker id="arrIcon" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <polygon points="0,0 10,5 0,10" fill="currentColor" stroke="none"/>
+              </marker>
+            </defs>
+          </svg>
+          <h3>Strom bleibt im Haus</h3>
+          <p>PV-Strom vom Dach deckt zuerst den Verbrauch im eigenen Gebäude. Erst der Rest geht ins öffentliche Netz.</p>
+        </div>
+        <div class="value-card">
+          <svg class="icon" width="40" height="40" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Zähler-Symbol mit Skala und Zeiger">
+            <circle cx="24" cy="24" r="17"/>
+            <line x1="24" y1="9" x2="24" y2="13"/>
+            <line x1="24" y1="35" x2="24" y2="39"/>
+            <line x1="9" y1="24" x2="13" y2="24"/>
+            <line x1="35" y1="24" x2="39" y2="24"/>
+            <line x1="24" y1="24" x2="32" y2="15"/>
+            <circle cx="24" cy="24" r="2.2" fill="currentColor" stroke="none"/>
+          </svg>
+          <h3>Jeder zahlt nur seinen Verbrauch</h3>
+          <p>Jede Wohnung hat einen eigenen MID-geeichten Zähler. Der Preis ist gesetzlich auf höchstens 90&nbsp;% des örtlichen Grundversorgertarifs gedeckelt.</p>
+        </div>
+        <div class="value-card">
+          <svg class="icon" width="40" height="40" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Beleg-Symbol mit Häkchen als Zeichen für automatische Abrechnung">
+            <rect x="12" y="6" width="24" height="34" rx="3"/>
+            <line x1="17" y1="15" x2="31" y2="15"/>
+            <line x1="17" y1="22" x2="31" y2="22"/>
+            <line x1="17" y1="29" x2="26" y2="29"/>
+            <circle cx="33" cy="34" r="8" fill="var(--bg)"/>
+            <polyline points="29.5,34 32,36.5 37,31"/>
+          </svg>
+          <h3>Abrechnung ohne Aufwand</h3>
+          <p>PlexLog liest alle Zähler automatisch aus. Niemand muss vor Ort Zählerstände notieren.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= KONFIGURATOR ================= -->
+  <section id="schema">
+    <div class="page">
+      <div class="section-head">
+        <span class="eyebrow">Der Aufbau</span>
+        <h2 style="margin-top:14px;">Stellen Sie Ihre Anlage zusammen</h2>
+        <p>Stellen Sie mit + und − Anzahl und Ausstattung ein — das Schema passt sich sofort an. Klicken Sie danach auf ein Bauteil, um zu erfahren, was es macht.</p>
+      </div>
+
+      <div class="legend-row">
+        <span><i class="swatch mid"></i>MID-Zähler — geeicht, abrechnungsrelevant</span>
+        <span><i class="swatch ems"></i>GWL-Technik — PlexLog &amp; PV-Anlage</span>
+        <span><i class="swatch neutral"></i>Verbraucher / Struktur</span>
+      </div>
+
+      <div class="config-controls">
+        <div class="field-grid">
+          <div class="field">
+            <div class="field-label">Wohnungen</div>
+            <div class="stepper">
+              <button type="button" class="step-btn" data-field="wohnungen" data-dir="-1" aria-label="Wohnung entfernen">−</button>
+              <span class="field-value" id="valWohnungen">2</span>
+              <button type="button" class="step-btn" data-field="wohnungen" data-dir="1" aria-label="Wohnung hinzufügen">+</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="field-label">Batteriespeicher</div>
+            <button type="button" class="btn-toggle" id="toggleSpeicher" data-toggle-field="speicher" data-label="Speicher" aria-pressed="false">Ohne Speicher</button>
+          </div>
+          <div class="field">
+            <div class="field-label">Ladeinfrastruktur (Wallbox)</div>
+            <div class="stepper">
+              <button type="button" class="step-btn" data-field="lis" data-dir="-1" aria-label="Wallbox entfernen">−</button>
+              <span class="field-value" id="valLis">1</span>
+              <button type="button" class="step-btn" data-field="lis" data-dir="1" aria-label="Wallbox hinzufügen">+</button>
+            </div>
+          </div>
+          <div class="field" id="field-waermepumpe">
+            <div class="field-label">Wärmepumpe (Heizung)</div>
+            <button type="button" class="btn-add" id="addWaermepumpe" data-add-field="waermepumpe">+ Wärmepumpe</button>
+            <div class="stepper" id="stepperWaermepumpe" hidden>
+              <button type="button" class="step-btn" data-field="waermepumpe" data-dir="-1" aria-label="Wärmepumpe entfernen">−</button>
+              <span class="field-value" id="valWaermepumpe">0</span>
+              <button type="button" class="step-btn" data-field="waermepumpe" data-dir="1" aria-label="Wärmepumpe hinzufügen">+</button>
+            </div>
+          </div>
+          <div class="field" id="field-sonstiges">
+            <div class="field-label">Sonstiges</div>
+            <button type="button" class="btn-add" id="addSonstiges" data-add-field="sonstiges">+ Sonstiges</button>
+            <div class="stepper" id="stepperSonstiges" hidden>
+              <button type="button" class="step-btn" data-field="sonstiges" data-dir="-1" aria-label="Sonstiges entfernen">−</button>
+              <span class="field-value" id="valSonstiges">0</span>
+              <button type="button" class="step-btn" data-field="sonstiges" data-dir="1" aria-label="Sonstiges hinzufügen">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-strip config-stats">
+        <div class="stat"><div class="num" id="statTotal">9</div><div class="label">Zähler gesamt (inkl. Hauptmessung)</div></div>
+        <div class="stat"><div class="num" id="statMid">9</div><div class="label">davon MID-geeicht</div></div>
+        <div class="stat"><div class="num text" id="statHaupt">Hauptzähler</div><div class="label">Hauptmessung</div></div>
+      </div>
+      <p class="stat-source config-note">Vereinfachte Darstellung: Ob ein Wandlerschrank nötig ist, hängt in der Praxis von der Anschlussleistung ab (&gt; 50&nbsp;A / 30&nbsp;kVA) — die Wohnungszahl dient hier nur als anschauliche Faustregel.</p>
+
+      <div class="diagram-layout">
+        <div>
+          <figure>
+            <p class="scroll-hint">← Schema ist breiter als der Bildschirm — zum Scrollen wischen →</p>
+            <div class="diagram-scroll">
+              <svg id="configSvg" class="schema" width="980" height="560" viewBox="0 0 980 560" role="img" aria-label="Interaktives Schema Ihrer Mieterstromanlage"></svg>
+            </div>
+            <figcaption id="schemaCaption">Ihre Auswahl: 2 Wohnungen, ohne Wärmepumpe, mit Ladeinfrastruktur, ohne Sonstiges. Hauptmessung über einfachen Hauptzähler Z1.</figcaption>
+          </figure>
+        </div>
+
+        <aside class="detail-panel" id="detail-panel" aria-live="polite">
+          <h3 id="detail-title">Bauteil auswählen</h3>
+          <div class="badges" id="detail-badges"></div>
+          <p id="detail-text" class="hint">Klicken oder tippen Sie auf ein Element im Schema, um zu erfahren, was es macht.</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ABRECHNUNG ================= -->
+  <section id="abrechnung">
+    <div class="page">
+      <div class="section-head">
+        <span class="eyebrow green">Das Kernstück</span>
+        <h2 style="margin-top:14px;">Die Abrechnung: vom Zählerstand zur fertigen Rechnung</h2>
+        <p>
+          Das ist der Teil, der Vermietern bei Mieterstrom normalerweise am meisten Kopfzerbrechen
+          bereitet — mit MID-Zählern und PlexLog läuft er weitgehend von selbst.
+        </p>
+      </div>
+
+      <div class="steps">
+        <div class="step-card">
+          <div class="step-no">01 · MESSEN</div>
+          <h3>Jede Wohnung hat ihren Zähler</h3>
+          <p>Ein MID-geeichter Zähler misst nur den Verbrauch dieser einen Wohnung — amtlich genau, wie beim Grundversorger.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-no">02 · SAMMELN</div>
+          <h3>PlexLog liest automatisch aus</h3>
+          <p>Der Energiemanager holt sich laufend die Werte aller Zähler im Haus — ganz ohne Vor-Ort-Termin.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-no">03 · PRÜFEN</div>
+          <h3>Der Messstellenbetreiber verarbeitet</h3>
+          <p>Ein zugelassener Dienstleister prüft die Daten technisch und meldet sie ans Netzbetreiber-System (Marktkommunikation).</p>
+        </div>
+        <div class="step-card">
+          <div class="step-no">04 · ABRECHNEN</div>
+          <h3>Der Mieter bekommt seine Rechnung</h3>
+          <p>Nach echtem Verbrauch, ohne Schätzung — zu höchstens 90&nbsp;% des örtlichen Grundversorgertarifs (gesetzlicher Preisdeckel).</p>
+        </div>
+      </div>
+
+      <div class="compare">
+        <div class="compare-col">
+          <h4>Klassische Nebenkostenabrechnung</h4>
+          <ul>
+            <li>
+              <svg class="mark" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="#8B949E" stroke-width="1.6"/><line x1="5.5" y1="5.5" x2="10.5" y2="10.5" stroke="#8B949E" stroke-width="1.6"/><line x1="10.5" y1="5.5" x2="5.5" y2="10.5" stroke="#8B949E" stroke-width="1.6"/></svg>
+              Zählerstände werden meist nur einmal im Jahr vor Ort abgelesen
+            </li>
+            <li>
+              <svg class="mark" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="#8B949E" stroke-width="1.6"/><line x1="5.5" y1="5.5" x2="10.5" y2="10.5" stroke="#8B949E" stroke-width="1.6"/><line x1="10.5" y1="5.5" x2="5.5" y2="10.5" stroke="#8B949E" stroke-width="1.6"/></svg>
+              Bei Umzug oder Leerstand wird oft geschätzt
+            </li>
+            <li>
+              <svg class="mark" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="#8B949E" stroke-width="1.6"/><line x1="5.5" y1="5.5" x2="10.5" y2="10.5" stroke="#8B949E" stroke-width="1.6"/><line x1="10.5" y1="5.5" x2="5.5" y2="10.5" stroke="#8B949E" stroke-width="1.6"/></svg>
+              Rückfragen und Streit bei Schätzwerten
+            </li>
+            <li>
+              <svg class="mark" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="#8B949E" stroke-width="1.6"/><line x1="5.5" y1="5.5" x2="10.5" y2="10.5" stroke="#8B949E" stroke-width="1.6"/><line x1="10.5" y1="5.5" x2="5.5" y2="10.5" stroke="#8B949E" stroke-width="1.6"/></svg>
+              Hoher manueller Aufwand für Verwaltung
+            </li>
+          </ul>
+        </div>
+        <div class="compare-col win">
+          <h4>Mieterstrom mit MID-Zählern &amp; PlexLog</h4>
+          <ul>
+            <li>
+              <svg class="mark" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="#E3A008" stroke-width="1.6"/><polyline points="4.8,8.2 7,10.5 11.3,5.8" fill="none" stroke="#E3A008" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Automatische Erfassung, laufend statt einmal im Jahr
+            </li>
+            <li>
+              <svg class="mark" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="#E3A008" stroke-width="1.6"/><polyline points="4.8,8.2 7,10.5 11.3,5.8" fill="none" stroke="#E3A008" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Amtlich geeicht (MID) — rechtssichere Werte, keine Schätzung
+            </li>
+            <li>
+              <svg class="mark" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="#E3A008" stroke-width="1.6"/><polyline points="4.8,8.2 7,10.5 11.3,5.8" fill="none" stroke="#E3A008" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Keine Vor-Ort-Termine für Ablesungen nötig
+            </li>
+            <li>
+              <svg class="mark" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="#E3A008" stroke-width="1.6"/><polyline points="4.8,8.2 7,10.5 11.3,5.8" fill="none" stroke="#E3A008" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              PlexLog übernimmt die Datenaufbereitung automatisch
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="page">
+    <span class="brand">GWL-Design</span>
+    <p>
+      Photovoltaik, Speicher und Mieterstrom aus einer Hand. Diese Seite erklärt das
+      allgemeine Funktionsprinzip; die konkrete Auslegung Ihrer Anlage hängt vom jeweiligen
+      Gebäude ab und wird individuell geplant.
+    </p>
+    <p style="margin-top:14px;">
+      <a href="https://gwl-design.de/datenschutz" target="_blank" rel="noopener">Datenschutzerklärung</a>
+    </p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var content = {
+    netz: { title:"Öffentliches Stromnetz", badges:[], text:"Der Netzbetreiber liefert Strom, wenn die Solaranlage nicht genug erzeugt – und nimmt überschüssigen Solarstrom ab, der im Haus nicht gebraucht wird." },
+    hak: { title:"Hausanschlusskasten (HAK)", badges:[], text:"Hier kommt der Strom vom öffentlichen Netz ins Gebäude. Ab diesem Punkt gehört die Anlage dem Hauseigentümer – die sogenannte Eigentumsgrenze." },
+    "msb-zaehler": { title:"Zähler Messstellenbetreiber", badges:["mid"], text:"Dieser Zähler gehört dem Messstellenbetreiber – nicht GWL oder dem Eigentümer. Er ist ein Zweirichtungszähler: Er misst sowohl den Strombezug aus dem Netz als auch die Einspeisung von PV-Überschuss, offiziell an der Grundstücksgrenze. Das ist die rechtlich bindende Grundlage für die Abrechnung mit dem Netzbetreiber. Der Hauptzähler darunter dient zusätzlich der internen Aufteilung im Haus." },
+    hauptzaehler: { title:"Hauptzähler", badges:["mid"], text:"Ist ebenfalls ein Zweirichtungszähler und misst den gesamten Strom zwischen Haus und interner Verteilung – Bezug aus dem Netz und Einspeisung von PV-Überschuss. Bis 50 A / 44 A Dauerleistung reicht ein normaler, direkt messender Zähler." },
+    wandlerschrank: { title:"Zentraler Wandlerschrank", badges:["mid"], text:"Ab etwa 50 A oder 30 kVA reicht ein normaler Zähler nicht mehr aus. Ein Wandlerzähler misst dann über sogenannte Stromwandler – Bauteile, die auch sehr hohe Ströme sicher und genau erfassen, ohne den vollen Strom durch den Zähler selbst zu leiten. Auch er ist ein Zweirichtungszähler (Bezug und Einspeisung)." },
+    pv: { title:"PV-Module", badges:[], text:"Die Solarmodule auf dem Dach wandeln Sonnenlicht in Gleichstrom (DC) um. Von dort fließt der Strom zum Wechselrichter." },
+    wechselrichter: { title:"Wechselrichter", badges:[], text:"Macht aus dem Gleichstrom (DC) der PV-Module Wechselstrom (AC), den das Haus nutzen kann. Ein Hybrid-Wechselrichter steuert zusätzlich den angeschlossenen Batteriespeicher." },
+    speicher: { title:"Batteriespeicher", badges:[], text:"Speichert überschüssigen Solarstrom für später, z. B. für den Abend, wenn die Sonne nicht mehr scheint. Ist DC-seitig direkt am Wechselrichter angeschlossen und braucht deshalb keinen eigenen Zähler." },
+    bus: { title:"Hauptverteilung", badges:[], text:"Die zentrale Verteilung im Haus. Von hier aus wird der Strom – egal ob aus dem Netz oder von der eigenen PV-Anlage – an alle Verbraucher im Gebäude weitergeleitet." },
+    plexlog: { title:"PlexLog – Energiemanager", badges:["ems"], text:"Sammelt laufend die Werte aller Zähler im Haus, steuert bei Bedarf Wärmepumpe, Speicher und Ladepunkte und stellt die Daten automatisch für die Abrechnung bereit. Deshalb muss niemand mehr Zählerstände von Hand ablesen." },
+    allgemeinstrom: { title:"Allgemeinstrom-Zähler", badges:["mid"], text:"Erfasst den Strom für Treppenhaus, Außenlicht, Keller und Technik – Kosten, die sich alle Bewohner anteilig teilen." },
+    "allgemeinstrom-verbrauch": { title:"Allgemeinstrom", badges:[], text:"Treppenhaus, Außenlicht, Keller, Technik und andere Gemeinschaftsflächen. Diese Kosten tragen alle Bewohner anteilig – ähnlich wie bei der klassischen Nebenkostenabrechnung." },
+    waermepumpe: { title:"Wärmepumpen-Zähler", badges:["mid"], text:"Erfasst Verbrauch für Heizung und Warmwasser separat, damit er nicht in die Mieterabrechnung einfließt." },
+    "waermepumpe-verbrauch": { title:"Wärmepumpe", badges:[], text:"Heizung und Warmwasser laufen meist über eine zentrale Wärmepumpe. Ihr Verbrauch wird über einen eigenen Zähler erfasst und separat vom Mieterverbrauch behandelt." },
+    sonstiges: { title:"Sonstiges-Zähler", badges:["mid"], text:"Erfasst eine zusätzliche Verbrauchsstelle, die nicht unter Allgemeinstrom, Wärmepumpe oder Wohnungen fällt — z. B. eine Gewerbeeinheit, Sauna oder Werkstatt." },
+    "sonstiges-verbrauch": { title:"Sonstiges", badges:[], text:"Eine zusätzliche Verbrauchsstelle im Gebäude, die separat erfasst wird, z. B. eine Gewerbeeinheit, Sauna oder Werkstatt." },
+    lis: { title:"Ladeinfrastruktur-Zähler", badges:["mid"], text:"Erfasst den Ladestrom für E-Autos separat, damit er nicht in die allgemeine Abrechnung einfließt." },
+    "lis-verbrauch": { title:"Wallbox / Ladesäule", badges:[], text:"Lademöglichkeit für Elektroautos, zum Beispiel in der Garage oder auf dem Stellplatz. Wird bei Bedarf einzeln abgerechnet." },
+    mieterzaehler: { title:"Mieterzähler", badges:["mid"], text:"Jede Wohnung bekommt einen eigenen geeichten Zähler. Er misst ausschließlich den Verbrauch dieser einen Wohnung – egal ob der Strom vom Dach oder aus dem Netz kommt." },
+    wohnung: { title:"Wohnung", badges:[], text:"Der Mieter zahlt für genau den Strom, den er selbst verbraucht hat – gesetzlich gedeckelt auf höchstens 90 % des Preises beim örtlichen Grundversorger." },
+    messstellenbetreiber: { title:"Messstellenbetreiber", badges:[], text:"Ein zugelassener Dienstleister (z. B. metergrid), der die Messdaten von PlexLog übernimmt, technisch prüft und für die Marktkommunikation mit dem Netzbetreiber sowie für die Abrechnung aufbereitet." }
+  };
+
+  var badgeLabel = { mid:"MID-geeicht", ems:"Energiemanager" };
+  var genericKeys = { mieterzaehler:true, wohnung:true, waermepumpe:true, "waermepumpe-verbrauch":true, sonstiges:true, "sonstiges-verbrauch":true, lis:true, "lis-verbrauch":true, "msb-zaehler":true, hauptzaehler:true, wandlerschrank:true };
+
+  var titleEl = document.getElementById('detail-title');
+  var textEl = document.getElementById('detail-text');
+  var badgesEl = document.getElementById('detail-badges');
+
+  function showDetail(key, node){
+    var entry = content[key];
+    if(!entry) return;
+    var label = node ? node.getAttribute('aria-label') : null;
+    titleEl.textContent = (genericKeys[key] && label) ? label : entry.title;
+    textEl.textContent = entry.text;
+    textEl.classList.remove('hint');
+    badgesEl.innerHTML = '';
+    entry.badges.forEach(function(b){
+      var span = document.createElement('span');
+      span.className = 'pill ' + b;
+      span.textContent = badgeLabel[b] || b;
+      badgesEl.appendChild(span);
+    });
+  }
+
+  // ---------------- Konfigurator: zeichnet das Schema live neu ----------------
+  var state = { wohnungen:2, speicher:1, waermepumpe:0, lis:1, sonstiges:0 };
+  var limits = { wohnungen:[1,20], waermepumpe:[0,5], lis:[0,10], sonstiges:[0,5] };
+  // Wärmepumpe & Sonstiges starten im Standard bei 0 (nur "+"-Button sichtbar) — siehe
+  // updateAddableFields(). Sobald der Zähler > 0 ist, zeigt das Feld den normalen Stepper.
+  var addableFields = ['waermepumpe', 'sonstiges'];
+  // Speicher ist kein Zähl-Feld, sondern ein einfacher Ja/Nein-Schalter (0 oder 1) —
+  // ein Projekt hat entweder einen Speicher oder keinen, nie mehrere.
+  var toggleFields = ['speicher'];
+  // DEV-ONLY: Anker für die Hauptreihe. Wird von centerDiagramOnViewport() nachjustiert,
+  // damit die Lücke zwischen Hauptzähler und Wechselrichter mittig zum Bildschirm liegt.
+  var RASTER = 5 * 96/25.4; // 1 Dev-Raster-Kästchen (5mm) in SVG-Einheiten (SVG wird 1:1 in px gerendert)
+  var spineCenterAnchor = 300;
+  var centeringInProgress = false;
+  var valEls = {
+    wohnungen: document.getElementById('valWohnungen'),
+    waermepumpe: document.getElementById('valWaermepumpe'),
+    lis: document.getElementById('valLis'),
+    sonstiges: document.getElementById('valSonstiges')
+  };
+  var statTotal = document.getElementById('statTotal');
+  var statMid = document.getElementById('statMid');
+  var statHaupt = document.getElementById('statHaupt');
+  var schemaCaption = document.getElementById('schemaCaption');
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function svgNode(tag, attrs){
+    var e = document.createElementNS(NS, tag);
+    for(var k in attrs){ e.setAttribute(k, attrs[k]); }
+    return e;
+  }
+  function svgText(x, y, content, attrs){
+    var base = {x:x, y:y, 'text-anchor':'middle'};
+    for(var k in (attrs||{})){ base[k] = attrs[k]; }
+    var t = svgNode('text', base);
+    t.textContent = content;
+    return t;
+  }
+  function connLine(x1, y1, x2, y2, attrs){
+    var base = {x1:x1, y1:y1, x2:x2, y2:y2, stroke:'#8B949E', 'stroke-width':'1.6', 'marker-end':'url(#arrC)'};
+    for(var k in (attrs||{})){ base[k] = attrs[k]; }
+    return svgNode('line', base);
+  }
+  var styleFor = {
+    mid: { fill:'rgba(45,164,78,.14)', stroke:'#2DA44E', sw:'1.6' },
+    ems: { fill:'rgba(227,160,8,.13)', stroke:'#E3A008', sw:'1.6' },
+    neutral: { fill:'#1C222B', stroke:'#30363D', sw:'1.5' },
+    grid: { fill:'rgba(88,166,255,.14)', stroke:'#58A6FF', sw:'1.6' },
+    // Kupferfarben nur für die Hauptverteilerschiene (echte Sammelschienen sind aus Kupfer) —
+    // eigene Kategorie statt "neutral" zu ändern, damit die grauen Verbraucher-Boxen unverändert bleiben.
+    copper: { fill:'rgba(184,115,51,.18)', stroke:'#B87333', sw:'1.6' }
+  };
+  function makeNode(dataKey, ariaLabel, cat, rectAttrs, lines){
+    var g = svgNode('g', {'class':'node', tabindex:'0', role:'button', 'aria-label':ariaLabel, 'data-key':dataKey});
+    var s = styleFor[cat];
+    var rectFull = {'class':'box', rx: rectAttrs.rx || 10, fill:s.fill, stroke:s.stroke, 'stroke-width':s.sw};
+    for(var k in rectAttrs){ rectFull[k] = rectAttrs[k]; }
+    g.appendChild(svgNode('rect', rectFull));
+    var cx = rectAttrs.x + rectAttrs.width/2;
+    lines.forEach(function(l){
+      var attrs = {'font-size': l.size || '13', 'font-weight': l.weight || '600', fill: l.fill || '#F0F6FC'};
+      if(l.mono){ attrs['font-family'] = 'var(--mono)'; }
+      if(l.spacing){ attrs['letter-spacing'] = l.spacing; }
+      g.appendChild(svgText(cx, l.y, l.content, attrs));
+    });
+    return g;
+  }
+  // Hauptverteilung als EIN zusammenhängendes Feld: waagrechter Balken + senkrechte
+  // Sammelschiene als ein einziger Pfad (T-Form), statt zwei separater Rechtecke mit
+  // sichtbarer Nahtstelle. Nur die vier Außenecken sind gerundet, am Übergang bleibt es eckig.
+  function makeBusShape(hx0, hy0, hWidth, hHeight, stemCx, stemHalfW, stemBottom, textY){
+    var hx1 = hx0 + hWidth, hy1 = hy0 + hHeight;
+    var vx0 = stemCx - stemHalfW, vx1 = stemCx + stemHalfW;
+    var rTop = 8, rStem = 6;
+    var d = [
+      'M', (hx0 + rTop), hy0,
+      'L', (hx1 - rTop), hy0,
+      'A', rTop, rTop, 0, 0, 1, hx1, (hy0 + rTop),
+      'L', hx1, hy1,
+      'L', vx1, hy1,
+      'L', vx1, (stemBottom - rStem),
+      'A', rStem, rStem, 0, 0, 1, (vx1 - rStem), stemBottom,
+      'L', (vx0 + rStem), stemBottom,
+      'A', rStem, rStem, 0, 0, 1, vx0, (stemBottom - rStem),
+      'L', vx0, hy1,
+      'L', hx0, hy1,
+      'L', hx0, (hy0 + rTop),
+      'A', rTop, rTop, 0, 0, 1, (hx0 + rTop), hy0,
+      'Z'
+    ].join(' ');
+    var g = svgNode('g', {'class':'node', tabindex:'0', role:'button', 'aria-label':'Hauptverteilung', 'data-key':'bus'});
+    var s = styleFor.copper;
+    g.appendChild(svgNode('path', {'class':'box', d:d, fill:s.fill, stroke:s.stroke, 'stroke-width':s.sw}));
+    g.appendChild(svgText(hx0 + hWidth/2, textY, 'HAUPTVERTEILUNG', {'font-size':'12', fill:'#8B949E', 'letter-spacing':'0.04em'}));
+    return g;
+  }
+  function splitLabel(label){
+    if(label === 'Allgemeinstrom'){ return ['Allgemein-', 'strom']; }
+    return [label];
+  }
+  // Erzeugt 0..N Spalten für ein erweiterbares Feld (Wärmepumpe, Sonstiges, Ladeinfrastruktur).
+  // Der Zähler-Tag (Z01, Z02, …) wird NICHT hier vergeben, sondern erst zentral in render()
+  // per fortlaufendem Zähler über alle Kategorien hinweg (siehe nextZTag()) — alle Zähler
+  // folgen derselben Logik, egal ob Allgemein-, Wärmepumpen-, Sonstiges-, Mieter- oder LIS-Zähler.
+  function repeatColumns(count, baseLabel, key, enduseKey, ariaMeterBase){
+    var cols = [];
+    if(count <= 0) return cols;
+    if(count === 1){
+      cols.push({ key:key, enduseKey:enduseKey, enduseLabel:baseLabel, ariaMeter:ariaMeterBase, ariaEnduse:baseLabel });
+    } else {
+      for(var i=1; i<=count; i++){
+        cols.push({ key:key, enduseKey:enduseKey, enduseLabel:baseLabel+' '+i, ariaMeter:ariaMeterBase+' '+i, ariaEnduse:baseLabel+' '+i });
+      }
+    }
+    return cols;
+  }
+
+  function render(){
+    var svg = document.getElementById('configSvg');
+    while(svg.firstChild){ svg.removeChild(svg.firstChild); }
+
+    var n = state.wohnungen;
+    var isLarge = n > 4;
+
+    // Feste Spalten unter der waagrechten Sammelschiene (Anzahl bleibt klein/übersichtlich).
+    // Reihenfolge: Allgemeinstrom, dann Sonstiges, dann Wärmepumpe(n) — wächst nach rechts.
+    var fixedColumns = [
+      { key:'allgemeinstrom', enduseKey:'allgemeinstrom-verbrauch', enduseLabel:'Allgemeinstrom', ariaMeter:'Allgemeinstrom-Zähler', ariaEnduse:'Allgemeinstrom' }
+    ];
+    fixedColumns = fixedColumns.concat(repeatColumns(state.sonstiges, 'Sonstiges', 'sonstiges', 'sonstiges-verbrauch', 'Sonstiges-Zähler'));
+    fixedColumns = fixedColumns.concat(repeatColumns(state.waermepumpe, 'Wärmepumpe', 'waermepumpe', 'waermepumpe-verbrauch', 'Wärmepumpen-Zähler'));
+
+    // Mieter und Ladeinfrastruktur wachsen stattdessen an einer eigenen senkrechten
+    // Sammelschiene nach unten: Mieter links, Ladeinfrastruktur rechts.
+    var mieterUnits = [];
+    for(var i=1; i<=n; i++){
+      mieterUnits.push({ key:'mieterzaehler', enduseKey:'wohnung', enduseLabel:'Wohnung '+i, ariaEnduse:'Wohnung '+i, wohnungIndex:i });
+    }
+    var lisUnits = repeatColumns(state.lis, 'Wallbox', 'lis', 'lis-verbrauch', 'Ladeinfrastruktur-Zähler');
+
+    // Alle Zähler bekommen dieselbe fortlaufende Nummerierung (Z01, Z02, …) — unabhängig von
+    // der Kategorie. Der Übergabezähler (Zähler des Messstellenbetreibers, an der
+    // Eigentumsgrenze) ist immer Z01, danach der Hauptzähler/Wandlerschrank als Z02.
+    // Erst danach die Spalten unter der Hauptverteilung (Allgemeinstrom, Sonstiges,
+    // Wärmepumpe), dann die Mieter (Wohnung für Wohnung), dann die Ladeinfrastruktur.
+    var zCounter = 1;
+    function nextZTag(){
+      var tag = 'Z' + String(zCounter).padStart(2, '0');
+      zCounter++;
+      return tag;
+    }
+    var msbTag = nextZTag();
+    var mainTag = nextZTag();
+    fixedColumns.forEach(function(col){ col.tag = nextZTag(); });
+    mieterUnits.forEach(function(unit){
+      unit.tag = nextZTag();
+      unit.ariaMeter = 'Mieterzähler ' + unit.tag + ', Wohnung ' + unit.wohnungIndex;
+    });
+    lisUnits.forEach(function(unit){ unit.tag = nextZTag(); });
+
+    // Hauptreihe (Netz/Zähler links, PV/Wechselrichter rechts) legt Lage und Breite der
+    // Hauptverteilung fest: sie beginnt links am Hauptzähler und endet rechts am Wechselrichter.
+    // Lücke zwischen Hauptzähler und Wechselrichter = 2 Raster (je 1 Raster links/rechts
+    // von der Symmetrielinie, die fix in der Bildschirmmitte liegt, siehe centerDiagramOnViewport()).
+    var spineCenter = spineCenterAnchor;
+    var pvCenter = spineCenter + 100 + 2*RASTER + 95;
+    var showSpeicher = state.speicher > 0;
+    var speicherCenter = pvCenter + 180; // Lücke WR↔Speicher enger als zuvor (näher an WR = "weiter links")
+    var pvRightEdge = showSpeicher ? (speicherCenter + 80) : (pvCenter + 95);
+
+    // Hauptkette Netz→HAK→Zähler(MSB)→Hauptzähler: alle vier Kästchen sind gleich breit
+    // und hoch wie der Hauptzähler, zentriert auf der Spine-Achse. Der Pfeil HAK→Zähler
+    // ist 1,5 Raster lang, die anderen beiden Pfeile behalten ihren bisherigen Abstand (30).
+    var boxW = 200, boxH = 58; // Mass des Hauptzählers, gilt jetzt für alle vier Kästchen
+    var netzY = 16, netzH = boxH;
+    var netzBottom = netzY + netzH;
+    var hakY = netzBottom + 30; // Abstand Netz→HAK unverändert
+    var hakW = boxW, hakH = boxH;
+    var hakBottom = hakY + hakH;
+    var zaehlerY = hakBottom + 1.5*RASTER;
+    var zaehlerW = boxW, zaehlerH = boxH;
+    var zaehlerBottom = zaehlerY + zaehlerH;
+    var hauptY = zaehlerBottom + 30; // Abstand Zähler→Hauptzähler unverändert
+    var hauptH = boxH;
+    var hauptBottom = hauptY + hauptH;
+
+    var busBarHeight = RASTER * 2; // zwei Raster-Kästchen hoch
+    var busBarCenterY = hauptBottom + 30 + busBarHeight/2; // Abstand Hauptzähler→Hauptverteilung unverändert
+    var busBarTop = busBarCenterY - busBarHeight/2;
+    var busBarBottom = busBarCenterY + busBarHeight/2;
+    var x0 = spineCenter - 100; // linke Kante = linke Kante des Hauptzählers
+    var busRight = pvRightEdge; // rechte Kante = rechte Kante des Speichers/Wechselrichters
+    var busWidth = busRight - x0;
+
+    // Allgemein-/Heizungszähler: je 2 Raster hoch, 5 Raster breit. Allgemeinzähler linksbündig
+    // unter dem Hauptzähler, weitere Spalten (Wärmepumpe(n), Sonstiges) reihen sich mit festem
+    // Abstand nach rechts an — das Feld wächst frei statt sich einen festen Gesamt-Span zu teilen,
+    // damit ab 3 Spalten keine Überlappung mehr entsteht.
+    var colW = 5*RASTER, colH = 2*RASTER, colGap = RASTER;
+    var colLeftAnchor = spineCenter - 100;
+    // Mieter/Wallbox-Sammelschiene startet mittig zwischen Wechselrichter und Speicher
+    // (ohne Speicher bleibt sie mittig unter dem Wechselrichter).
+    var railX = showSpeicher ? (pvCenter + speicherCenter)/2 : pvCenter;
+    var colTop = busBarBottom + 43; // Abstand Hauptverteilung→Zählerspalten unverändert
+    var rowPitch = 66;
+    var maxRows = Math.max(mieterUnits.length, lisUnits.length, 1);
+    // Sammelschiene rückt jetzt unter den Wechselrichter, ihre Mieter-Abgänge reichen also weiter
+    // nach links – die Abgänge müssen unter der Wärmepumpen-/Allgemeinstrom-Spalte beginnen, nicht daneben.
+    var fixedColBottom = colTop + colH + 24 + 54;
+    var railTop = fixedColBottom + 20; // erster Abgang (Reihe 1)
+    var railBottom = railTop + maxRows*rowPitch;
+    var rightExtent = lisUnits.length > 0 ? (railX + 196) : railX;
+
+    var viewW = Math.round(Math.max(busRight + 60, pvRightEdge + 60, rightExtent + 60));
+    var viewH = Math.round(Math.max(638, railBottom + 60));
+    svg.setAttribute('viewBox', '0 0 ' + viewW + ' ' + viewH);
+    svg.setAttribute('width', viewW);
+    svg.setAttribute('height', viewH);
+
+    // Pfeilspitzen neu anlegen (SVG wurde geleert)
+    var defs = svgNode('defs', {});
+    [['arrC','#8B949E'], ['arrGoldC','#E3A008']].forEach(function(pair){
+      var m = svgNode('marker', {id:pair[0], viewBox:'0 0 10 10', refX:'9', refY:'5', markerWidth:'7', markerHeight:'7', orient:'auto-start-reverse'});
+      m.appendChild(svgNode('polygon', {points:'0,0 10,5 0,10', fill:pair[1]}));
+      defs.appendChild(m);
+    });
+    svg.appendChild(defs);
+
+    // Netzanschluss-Strang
+    svg.appendChild(connLine(spineCenter,netzBottom,spineCenter,hakY,{'stroke-width':'2','marker-start':'url(#arrC)'}));
+    svg.appendChild(connLine(spineCenter,hakBottom,spineCenter,zaehlerY,{'stroke-width':'2','marker-start':'url(#arrC)'}));
+    svg.appendChild(connLine(spineCenter,zaehlerBottom,spineCenter,hauptY,{'stroke-width':'2','marker-start':'url(#arrC)'}));
+    svg.appendChild(connLine(spineCenter,hauptBottom,spineCenter,busBarTop,{'stroke-width':'2'}));
+    svg.appendChild(connLine(pvCenter,zaehlerBottom,pvCenter,hauptY,{'stroke-width':'2'}));
+    svg.appendChild(connLine(pvCenter,hauptBottom,pvCenter,busBarTop,{'stroke-width':'2'}));
+    if(showSpeicher){
+      var speicherLineY = hauptY + hauptH/2;
+      svg.appendChild(connLine(pvCenter+95,speicherLineY, speicherCenter-80,speicherLineY, {'stroke-width':'1.6', 'marker-start':'url(#arrC)', 'marker-end':'url(#arrC)'}));
+      svg.appendChild(svgText((pvCenter+95+speicherCenter-80)/2, speicherLineY-8, 'DC', {'font-size':'9.5', fill:'#8B949E'}));
+    }
+    svg.appendChild(svgText(spineCenter+100, 85, 'Bezug / Einspeisung', {'font-size':'10.5', fill:'#8B949E', 'text-anchor':'start'}));
+
+    svg.appendChild(makeNode('netz','Öffentliches Stromnetz','grid', {x:spineCenter-100,y:netzY,width:200,height:netzH}, [
+      {y:45, content:'Öffentliches Netz'}
+    ]));
+    svg.appendChild(makeNode('hak','Hausanschlusskasten','grid', {x:spineCenter-hakW/2,y:hakY,width:hakW,height:hakH}, [
+      {y:hakY+hakH/2, content:'Hausanschluss'},
+      {y:hakY+hakH/2+15, content:'(HAK)', size:'10.5', weight:'400', fill:'#8B949E'}
+    ]));
+
+    svg.appendChild(makeNode('msb-zaehler','Übergabezähler '+msbTag+', Zähler Messstellenbetreiber','grid', {x:spineCenter-zaehlerW/2,y:zaehlerY,width:zaehlerW,height:zaehlerH}, [
+      {y:zaehlerY+15, content:'Zähler', size:'12.5'},
+      {y:zaehlerY+28, content:'Messstellenbetreiber', size:'9.5', weight:'400', fill:'#8B949E'},
+      {y:zaehlerY+43, content: msbTag, size:'10.5', weight:'400', fill:'#8B949E', mono:true}
+    ]));
+
+    var mainKey = isLarge ? 'wandlerschrank' : 'hauptzaehler';
+    var mainAria = (isLarge ? 'Zentraler Wandlerschrank' : 'Hauptzähler') + ' ' + mainTag;
+    svg.appendChild(makeNode(mainKey, mainAria, 'mid', {x:spineCenter-100,y:hauptY,width:200,height:hauptH}, [
+      {y:hauptY+26, content: isLarge ? 'Wandlerschrank' : 'Hauptzähler', size:'12.5'},
+      {y:hauptY+42, content: mainTag, size:'10.5', weight:'400', fill:'#8B949E', mono:true}
+    ]));
+
+    svg.appendChild(makeNode('pv','PV-Module','ems', {x:pvCenter-95,y:zaehlerY,width:190,height:48}, [
+      {y:zaehlerY+24, content:'PV-Module', size:'12.5'},
+      {y:zaehlerY+39, content:'Gleichstrom (DC)', size:'9.5', weight:'400', fill:'#8B949E'}
+    ]));
+    svg.appendChild(makeNode('wechselrichter','Wechselrichter','ems', {x:pvCenter-95,y:hauptY,width:190,height:hauptH}, [
+      {y:hauptY+26, content:'Wechselrichter', size:'12.5'},
+      {y:hauptY+42, content:'DC → AC', size:'10.5', weight:'400', fill:'#8B949E'}
+    ]));
+    if(showSpeicher){
+      svg.appendChild(makeNode('speicher','Batteriespeicher','ems', {x:speicherCenter-80,y:hauptY,width:160,height:hauptH}, [
+        {y:hauptY+26, content:'Speicher', size:'12.5'},
+        {y:hauptY+42, content:'DC-gekoppelt', size:'10', weight:'400', fill:'#8B949E'}
+      ]));
+    }
+
+    svg.appendChild(makeBusShape(x0, busBarTop, busWidth, busBarHeight, railX, 8, railBottom, busBarCenterY+5));
+
+    fixedColumns.forEach(function(col, idx){
+      var cx = colLeftAnchor + colW/2 + idx * (colW + colGap);
+      var colBottom = colTop + colH;
+      var enduseTop = colBottom + 24;
+      svg.appendChild(connLine(cx,busBarBottom,cx,colTop));
+      svg.appendChild(connLine(cx,colBottom,cx,enduseTop));
+      svg.appendChild(makeNode(col.key, col.ariaMeter, 'mid', {x:cx-colW/2,y:colTop,width:colW,height:colH}, [
+        {y:colTop+colH/2, content:col.tag, size:'12.5', mono:true}
+      ]));
+      var labelLines = splitLabel(col.enduseLabel);
+      var textDefs = labelLines.length === 1
+        ? [{y:enduseTop+31, content:labelLines[0], size:'11'}]
+        : [{y:enduseTop+24, content:labelLines[0], size:'11'}, {y:enduseTop+38, content:labelLines[1], size:'11'}];
+      svg.appendChild(makeNode(col.enduseKey, col.ariaEnduse, 'neutral', {x:cx-45,y:enduseTop,width:90,height:54}, textDefs));
+    });
+
+    mieterUnits.forEach(function(unit, idx){
+      var rowY = railTop + (idx+0.5)*rowPitch;
+      var chipX = railX-94, enduseX = railX-196;
+      svg.appendChild(connLine(railX,rowY, chipX+70,rowY));
+      svg.appendChild(connLine(chipX,rowY, enduseX+86,rowY));
+      svg.appendChild(makeNode(unit.key, unit.ariaMeter, 'mid', {x:chipX,y:rowY-17,width:70,height:34}, [
+        {y:rowY+4, content:unit.tag, size:'11', mono:true}
+      ]));
+      svg.appendChild(makeNode(unit.enduseKey, unit.ariaEnduse, 'neutral', {x:enduseX,y:rowY-23,width:86,height:46}, [
+        {y:rowY+3, content:unit.enduseLabel, size:'10'}
+      ]));
+    });
+
+    lisUnits.forEach(function(unit, idx){
+      var rowY = railTop + (idx+0.5)*rowPitch;
+      var chipX = railX+24, enduseX = railX+110;
+      svg.appendChild(connLine(railX,rowY, chipX,rowY));
+      svg.appendChild(connLine(chipX+70,rowY, enduseX,rowY));
+      svg.appendChild(makeNode(unit.key, unit.ariaMeter, 'mid', {x:chipX,y:rowY-17,width:70,height:34}, [
+        {y:rowY+4, content:unit.tag, size:'11', mono:true}
+      ]));
+      svg.appendChild(makeNode(unit.enduseKey, unit.ariaEnduse, 'neutral', {x:enduseX,y:rowY-23,width:86,height:46}, [
+        {y:rowY+3, content:unit.enduseLabel, size:'10'}
+      ]));
+    });
+
+    svg.appendChild(makeNode('plexlog','PlexLog Energiemanager','ems', {x:20,y:hauptY,width:100,height:hauptH}, [
+      {y:hauptY+26, content:'PlexLog', size:'12.5', weight:'700'},
+      {y:hauptY+42, content:'Energiemanager', size:'9', weight:'400', fill:'#8B949E'}
+    ]));
+
+    svg.querySelectorAll('.node').forEach(function(node){
+      node.addEventListener('click', function(){ showDetail(node.getAttribute('data-key'), node); });
+      node.addEventListener('keydown', function(e){
+        if(e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          showDetail(node.getAttribute('data-key'), node);
+        }
+      });
+    });
+
+    var totalMeters = zCounter - 1; // alle vergebenen Z-Nummern, inkl. Übergabezähler Z01 & Hauptmessung
+    statTotal.textContent = totalMeters;
+    statMid.textContent = totalMeters;
+    statHaupt.textContent = isLarge ? 'Wandlerschrank' : 'Hauptzähler';
+
+    function describe(count, singular, plural){
+      if(count === 0){ return 'ohne ' + singular; }
+      if(count === 1){ return 'mit ' + singular; }
+      return 'mit ' + count + '× ' + (plural || singular);
+    }
+    var parts = [
+      n + (n === 1 ? ' Wohnung' : ' Wohnungen'),
+      describe(state.speicher, 'Batteriespeicher'),
+      describe(state.waermepumpe, 'Wärmepumpe', 'Wärmepumpen'),
+      describe(state.lis, 'Ladeinfrastruktur'),
+      describe(state.sonstiges, 'Sonstiges')
+    ];
+    var meterNote = isLarge
+      ? 'Hauptmessung über zentralen Wandlerschrank (' + mainTag + ', > 50 A / 30 kVA).'
+      : 'Hauptmessung über einfachen Hauptzähler ' + mainTag + '.';
+    schemaCaption.textContent = 'Ihre Auswahl: ' + parts.join(', ') + '. ' + meterNote;
+
+    if(!centeringInProgress){ centerDiagramOnViewport(); }
+  }
+
+  // DEV-ONLY: Symmetrielinie liegt fix in der Bildschirmmitte (CSS, siehe .dev-grid-overlay::after).
+  // Diese Funktion justiert stattdessen die Hauptreihe des Diagramms nach, damit die Lücke
+  // zwischen Hauptzähler und Wechselrichter mittig zu dieser Linie liegt (je 1 Raster Abstand).
+  function centerDiagramOnViewport(){
+    var svg = document.getElementById('configSvg');
+    var mainNode = svg.querySelector('[data-key="hauptzaehler"], [data-key="wandlerschrank"]');
+    var wrNode = svg.querySelector('[data-key="wechselrichter"]');
+    if(!mainNode || !wrNode) return;
+    var r1 = mainNode.getBoundingClientRect();
+    var r2 = wrNode.getBoundingClientRect();
+    var gapCenterX = (r1.right + r2.left) / 2;
+    var viewportCenterX = window.innerWidth / 2;
+    var delta = viewportCenterX - gapCenterX;
+    if(Math.abs(delta) > 0.5){
+      spineCenterAnchor += delta;
+      centeringInProgress = true;
+      render();
+      centeringInProgress = false;
+    }
+  }
+  window.addEventListener('resize', centerDiagramOnViewport);
+
+  function updateStepButtons(){
+    document.querySelectorAll('.step-btn').forEach(function(btn){
+      var field = btn.getAttribute('data-field');
+      var dir = parseInt(btn.getAttribute('data-dir'), 10);
+      var lim = limits[field];
+      var next = state[field] + dir;
+      btn.disabled = (next < lim[0] || next > lim[1]);
+    });
+    updateAddableFields();
+  }
+
+  // Wärmepumpe & Sonstiges: im Standard nur ein "+"-Button sichtbar (Feld existiert noch
+  // nicht). Erst sobald der Zähler > 0 ist, blendet sich der normale Stepper ein; geht er
+  // per "−" zurück auf 0, verschwindet der Stepper wieder zugunsten des "+"-Buttons.
+  function updateAddableFields(){
+    addableFields.forEach(function(field){
+      var label = field.charAt(0).toUpperCase() + field.slice(1);
+      var active = state[field] > 0;
+      document.getElementById('add' + label).hidden = active;
+      document.getElementById('stepper' + label).hidden = !active;
+    });
+  }
+
+  document.querySelectorAll('.step-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var field = btn.getAttribute('data-field');
+      var dir = parseInt(btn.getAttribute('data-dir'), 10);
+      var lim = limits[field];
+      var next = state[field] + dir;
+      if(next < lim[0] || next > lim[1]) return;
+      state[field] = next;
+      valEls[field].textContent = next;
+      updateStepButtons();
+      render();
+    });
+  });
+
+  document.querySelectorAll('.btn-add').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var field = btn.getAttribute('data-add-field');
+      state[field] = 1;
+      valEls[field].textContent = 1;
+      updateStepButtons();
+      render();
+    });
+  });
+
+  // Speicher: reiner Ja/Nein-Schalter, kein Stepper — ein Klick kippt zwischen 0 und 1.
+  function updateToggleButtons(){
+    toggleFields.forEach(function(field){
+      var btn = document.querySelector('[data-toggle-field="' + field + '"]');
+      var active = state[field] > 0;
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      btn.textContent = (active ? 'Mit ' : 'Ohne ') + btn.getAttribute('data-label');
+    });
+  }
+
+  document.querySelectorAll('.btn-toggle').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var field = btn.getAttribute('data-toggle-field');
+      state[field] = state[field] > 0 ? 0 : 1;
+      updateToggleButtons();
+      render();
+    });
+  });
+
+  updateStepButtons();
+  updateToggleButtons();
+  render();
+})();
+</script>

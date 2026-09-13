@@ -1,0 +1,28 @@
+# Render Blueprint — Deploy der Mieterstrom-Kundenseite
+#
+# Setup (einmalig, in der Render-UI, nicht per CLI ausführbar):
+#   1. Dieses Verzeichnis liegt als eigenes Git-Repo auf GitHub (gwl-mieterstrom) — laut
+#      CLAUDE.md ist 99.Software insgesamt nur Datensicherung, kein Live-Repo, genau wie
+#      bei Konfigurator-Westafrika und Lehmann Ersatzziegel hat diese App ihr eigenes Repo.
+#   2. render.com → New → Blueprint → GitHub-Repo "gwl-mieterstrom" auswählen → Render
+#      liest diese Datei automatisch und erstellt den Service unten.
+#   3. Service-Namen nach dem ersten Deploy nicht mehr ändern (siehe Hosting-Vorgaben.md
+#      Regel 1) — die Live-URL lautet dann https://mieterstrom-frontend.onrender.com.
+#
+# Reine statische Kundeninfo-Seite (HTML/CSS/JS, kein Build-Schritt, kein Backend nötig) —
+# deshalb bewusst nur ein einziger Static-Site-Service, kein Datenbank-/API-Bedarf.
+
+services:
+  # Kein "plan"-Feld: Static Sites sind bei Render grundsätzlich kostenlos.
+  # Kein "region"-Feld: Static Sites laufen über ein globales CDN, das Regions-Feld gilt
+  # nur für laufzeitbasierte Services (siehe Hosting-Vorgaben.md).
+  - type: web
+    name: mieterstrom-frontend
+    runtime: static
+    staticPublishPath: ./Kunden-Erklaerseite
+    # Einzige Seite der App: jeder Pfad (inkl. "/") liefert die Erklärseite direkt aus,
+    # kein SPA-Routing nötig, nur ein einfacher Dateiname-Rewrite auf den Root-Pfad.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /mieterstrom-erklaerung.html

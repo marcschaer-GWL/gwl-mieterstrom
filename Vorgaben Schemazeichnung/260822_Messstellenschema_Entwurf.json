@@ -1,0 +1,108 @@
+{
+  "source_file": "260822_Messstellenschema_Entwurf.png",
+  "title": "MESSSTELLENSCHEMA – MFH 78176",
+  "subtitle": "Einseitiges Messstellenschema für Mieterstrommodell mit Smart Meter (EMS) vor Hauptverteilung – PV-Anlage mit optionalem DC-seitigem Speicher",
+  "meta": {
+    "objekt": "MFH 78176",
+    "projekt_nr": null,
+    "stand": "2026-08-22"
+  },
+  "abrechnungsrelevante_messpunkte_gesamt": 15,
+  "legende": [
+    {"symbol": "Linie blau durchgezogen", "bedeutung": "AC – Energiefluss"},
+    {"symbol": "Linie grün durchgezogen", "bedeutung": "DC – Energiefluss"},
+    {"symbol": "Linie gestrichelt", "bedeutung": "Kommunikation / Messdaten (Modbus / CLS)"},
+    {"symbol": "kWh", "bedeutung": "Zähler MID / eichrechtskonform (abrechnungsrelevant)"},
+    {"symbol": "SM", "bedeutung": "Smart Meter (führt EMS aus) (nicht abrechnungsrelevant)"}
+  ],
+  "messpunkte_gesamt": {
+    "zentrale_zaehler": 2,
+    "mieterverbrauchszaehler": 11,
+    "eigentuemerverbrauchszaehler": 2,
+    "summe": 15
+  },
+  "option_speicher_dc": "Batteriespeicher DC-seitig am Hybridwechselrichter (PV-gekoppelt) – heute optional, später integrierbar",
+  "nodes": [
+    {"id": "netz", "label": "Öffentliches Netz", "type": "netz"},
+    {"id": "hak", "label": "Hausanschlusskasten (HAK)", "type": "verteilung"},
+    {"id": "Z1", "label": "Summenzähler Netz", "type": "zaehler", "kategorie": "zentral", "details": "Bezug / Einspeisung (HAK nach TAB), Bilanzgrenze zum Netz", "abrechnungsrelevant": true},
+    {"id": "Z2", "label": "PV-Erzeugungszähler", "type": "zaehler", "kategorie": "zentral", "abrechnungsrelevant": true, "hinweis": "in Übersichtstabellen gelistet, im Flussdiagramm nicht separat beschriftet"},
+    {"id": "SM", "label": "Smart Meter (EMS)", "type": "smart_meter", "abrechnungsrelevant": false, "funktionen": [
+      "Erfassung aller relevanten Messwerte",
+      "Energiemanagement & Optimierung",
+      "Steuerung Wärmepumpe (SG Ready / Modbus)",
+      "Lastmanagement / Peak Shaving",
+      "PV-Überschussnutzung",
+      "optionale Speichersteuerung",
+      "Schnittstelle zu metergrid (CLS/SMGW)"
+    ]},
+    {"id": "pv_module", "label": "PV-Module", "type": "erzeugung"},
+    {"id": "hybrid_wr", "label": "Hybridwechselrichter", "type": "wechselrichter"},
+    {"id": "batteriespeicher", "label": "Batteriespeicher (optional, DC)", "type": "speicher", "status": "optional"},
+    {"id": "hv", "label": "Hauptverteilung (HV)", "type": "verteilung"},
+    {"id": "waermepumpe", "label": "Wärmepumpe (Heizung/Warmwasser)", "type": "verbraucher", "hinweis": "keine separate Messstelle erforderlich, Anbindung an SM"},
+    {"id": "Z3", "label": "Wohnung 1", "type": "zaehler", "kategorie": "mieter"},
+    {"id": "Z4", "label": "Wohnung 2", "type": "zaehler", "kategorie": "mieter"},
+    {"id": "Z5", "label": "Wohnung 3", "type": "zaehler", "kategorie": "mieter"},
+    {"id": "Z6", "label": "Wohnung 4", "type": "zaehler", "kategorie": "mieter"},
+    {"id": "Z7", "label": "Wohnung 5", "type": "zaehler", "kategorie": "mieter"},
+    {"id": "Z8", "label": "Wohnung 6", "type": "zaehler", "kategorie": "mieter"},
+    {"id": "Z9", "label": "Wohnung 7", "type": "zaehler", "kategorie": "mieter"},
+    {"id": "Z10", "label": "Garage 1", "type": "zaehler", "kategorie": "mieter", "details": "inkl. Licht, Steckdose und ggf. Wallbox"},
+    {"id": "Z11", "label": "Garage 2", "type": "zaehler", "kategorie": "mieter", "details": "inkl. Licht, Steckdose und ggf. Wallbox"},
+    {"id": "Z12", "label": "Stellplätze Hausseite", "type": "zaehler", "kategorie": "mieter", "details": "1 Leerplatz Vorbereitung Wallbox (Reserve)"},
+    {"id": "Z13", "label": "Hobbyraum", "type": "zaehler", "kategorie": "mieter", "details": "zur Vermietung"},
+    {"id": "Z14", "label": "Wärmepumpe (Heizung/Warmwasser)", "type": "zaehler", "kategorie": "eigentuemer", "details": "inkl. Umwälzpumpen, Regelung, WW-Bereitung"},
+    {"id": "Z15", "label": "Allgemeinstrom", "type": "zaehler", "kategorie": "eigentuemer", "details": "Treppenhaus, Keller, Außenlicht, Technik, Netzwerk, Briefkastenanlage, sonstige Gemeinschaftsverbraucher"},
+    {"id": "metergrid", "label": "metergrid / Messstellenbetreiber", "type": "extern", "funktionen": [
+      "Bereitstellung & Betrieb der Messinfrastruktur (SMGW)",
+      "Messdatenverarbeitung",
+      "Abrechnung Mieterstrommodell",
+      "Marktkommunikation"
+    ]},
+    {"id": "netzbetreiber", "label": "Netzbetreiber", "type": "extern", "funktionen": [
+      "Netzanschluss",
+      "Z1 – Summenzähler (Bezug / Einspeisung)",
+      "Einspeisung PV"
+    ]}
+  ],
+  "edges": [
+    {"from": "netz", "to": "hak", "type": "AC"},
+    {"from": "hak", "to": "Z1", "type": "AC"},
+    {"from": "Z1", "to": "SM", "type": "AC"},
+    {"from": "pv_module", "to": "hybrid_wr", "type": "DC"},
+    {"from": "hybrid_wr", "to": "SM", "type": "AC"},
+    {"from": "batteriespeicher", "to": "hybrid_wr", "type": "DC", "style": "gestrichelt/optional"},
+    {"from": "SM", "to": "hv", "type": "AC"},
+    {"from": "SM", "to": "waermepumpe", "type": "Kommunikation", "style": "gestrichelt"},
+    {"from": "hv", "to": "Z3", "type": "AC"},
+    {"from": "hv", "to": "Z4", "type": "AC"},
+    {"from": "hv", "to": "Z5", "type": "AC"},
+    {"from": "hv", "to": "Z6", "type": "AC"},
+    {"from": "hv", "to": "Z7", "type": "AC"},
+    {"from": "hv", "to": "Z8", "type": "AC"},
+    {"from": "hv", "to": "Z9", "type": "AC"},
+    {"from": "hv", "to": "Z10", "type": "AC"},
+    {"from": "hv", "to": "Z11", "type": "AC"},
+    {"from": "hv", "to": "Z12", "type": "AC"},
+    {"from": "hv", "to": "Z13", "type": "AC"},
+    {"from": "hv", "to": "Z14", "type": "AC"},
+    {"from": "hv", "to": "Z15", "type": "AC"},
+    {"from": "SM", "to": "metergrid", "type": "Kommunikation", "style": "gestrichelt", "details": "Messdatenübertragung (CLS/SMGW), Steuerbefehle, Datenbereitstellung"},
+    {"from": "metergrid", "to": "netzbetreiber", "type": "Kommunikation", "style": "gestrichelt"}
+  ],
+  "wichtige_hinweise": [
+    "Alle Zähler sind MID / eichrechtskonform auszuführen.",
+    "Unterverteilungen je Einheit mit entsprechendem Überspannungsschutz und RCD.",
+    "Für zukünftige Wallboxen und Leerrohre, Lastmanagement und Reserveplatz in Unterverteilung vorzusehen.",
+    "Messkonzept entspricht Anforderungen für Mieterstrommodell / GGV.",
+    "Smart Meter (EMS) ist zentrale Instanz für Messung, Steuerung und Optimierung."
+  ],
+  "zusammenfassung_messpunkte": {
+    "summenzaehler_netz_Z1": 1,
+    "pv_erzeugungszaehler_Z2": 1,
+    "mieterzaehler": 11,
+    "eigentuemerzaehler": 2,
+    "gesamt": 15
+  }
+}

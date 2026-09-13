@@ -1,0 +1,48 @@
+{
+  "source_file": "mieterstrom-messkonzept-bis-4-mieter (1).png",
+  "title": "Mieterstrom-Messkonzept bis 4 Mieter",
+  "subtitle": "Direktmessung bis 50A / 44A Dauerleistung",
+  "anlage": "Kundenanlage (alte Küferei, Blumberg)",
+  "legende": [
+    {"kategorie": "Ladeinfrastruktur (LIS) / sVe", "farbe": "rot"},
+    {"kategorie": "Mieter / Verbraucher", "farbe": "blau"},
+    {"kategorie": "PV-Erzeugung & Speicher", "farbe": "orange"},
+    {"kategorie": "Zwei-Richtungs-Zähler (eHZ / Dreipunkt)", "farbe": "grün"},
+    {"kategorie": "Netzbetreiber / VNB", "farbe": "grau"}
+  ],
+  "nodes": [
+    {"id": "vnb", "label": "Öffentliches Stromnetz (VNB)", "type": "netz"},
+    {"id": "hak", "label": "Hausanschlusskasten (HAK)", "type": "verteilung"},
+    {"id": "Z1", "label": "Hauptzähler", "type": "zaehler", "kategorie": "haupt", "details": "Zwei-Richtungs-Zähler, Direktmessend eHZ oder Dreipunkt", "grenzwert": "max. 50A / 44A"},
+    {"id": "sammelschiene", "label": "Hauptleitungsverteiler / Sammelschiene", "type": "verteilung", "grenzwert": "max. 50A Belastung"},
+    {"id": "pv_generator", "label": "PV-Generator", "type": "erzeugung", "leistung_kwp": 11},
+    {"id": "hybrid_wr", "label": "Hybrid-Wechselrichter", "type": "wechselrichter", "modell": "Solis / Deye"},
+    {"id": "batteriespeicher", "label": "Batteriespeicher", "type": "speicher", "modell": "Deye SE-G5.1 Pro", "anzahl": 1},
+    {"id": "ems", "label": "Energiemanagementsystem (EMS)", "type": "steuerung", "protokoll": "SG Ready / Modbus"},
+    {"id": "Z2", "label": "Mieter 1", "type": "zaehler", "kategorie": "mieter", "wohnung": "Wohnung 1"},
+    {"id": "Z3", "label": "Mieter 2", "type": "zaehler", "kategorie": "mieter", "wohnung": "Wohnung 2"},
+    {"id": "Z4", "label": "Mieter 3", "type": "zaehler", "kategorie": "mieter", "wohnung": "Wohnung 3"},
+    {"id": "Z5", "label": "Mieter 4", "type": "zaehler", "kategorie": "mieter", "wohnung": "Wohnung 4"},
+    {"id": "Z_Allg", "label": "Allgemeinstrom", "type": "zaehler", "kategorie": "allgemein", "details": "Zwei-Richtungs-Zähler", "verbraucher": "Flurlicht, Keller, etc."},
+    {"id": "waermepumpe", "label": "Wärmepumpe sVe", "type": "verbraucher", "modell": "IDM AERO ALM 8-18"},
+    {"id": "Z_LIS", "label": "Lade-Infrastruktur", "type": "zaehler", "kategorie": "ladeinfrastruktur", "details": "Zwei-Richtungs-Zähler"},
+    {"id": "ladesaeule", "label": "Ladesäule / LIS", "type": "verbraucher", "details": "Wandladestationen"}
+  ],
+  "edges": [
+    {"from": "vnb", "to": "hak", "type": "AC", "spannung": "400V AC"},
+    {"from": "hak", "to": "Z1", "type": "AC", "richtung": "AC Einspeisung", "farbe": "rot"},
+    {"from": "Z1", "to": "sammelschiene", "type": "AC"},
+    {"from": "pv_generator", "to": "hybrid_wr", "type": "DC"},
+    {"from": "hybrid_wr", "to": "batteriespeicher", "type": "DC", "spannung": "48V"},
+    {"from": "hybrid_wr", "to": "sammelschiene", "type": "AC"},
+    {"from": "ems", "to": "hybrid_wr", "type": "Steuerung", "style": "gestrichelt"},
+    {"from": "sammelschiene", "to": "Z2", "type": "AC"},
+    {"from": "sammelschiene", "to": "Z3", "type": "AC"},
+    {"from": "sammelschiene", "to": "Z4", "type": "AC"},
+    {"from": "sammelschiene", "to": "Z5", "type": "AC"},
+    {"from": "sammelschiene", "to": "Z_Allg", "type": "AC"},
+    {"from": "sammelschiene", "to": "Z_LIS", "type": "AC"},
+    {"from": "Z_Allg", "to": "waermepumpe", "type": "AC", "label": "Heizung/WP"},
+    {"from": "Z_LIS", "to": "ladesaeule", "type": "AC", "label": "Ladestrom"}
+  ]
+}
