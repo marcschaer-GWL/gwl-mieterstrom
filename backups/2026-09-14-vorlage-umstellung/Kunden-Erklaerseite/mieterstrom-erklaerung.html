@@ -1,8 +1,3 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mieterstrom bei GWL-Design — so funktioniert's</title>
 <style>
   /* Selbst gehostete Schrift (keine externen Font-CDNs, siehe Frontend-Vorgaben) */
@@ -18,86 +13,60 @@
   :root{
     --bg:#0D1117;
     --surface:#161B22;
-    --surfaceHover:#1C222B;
+    --surface-hover:#1C222B;
     --border:#30363D;
-    --textPrimary:#F0F6FC;
-    --textSecondary:#8B949E;
+    --text:#F0F6FC;
+    --text-secondary:#8B949E;
     --gold:#E3A008;
     --gold-soft:rgba(227,160,8,.13);
     --gold-border:rgba(227,160,8,.45);
     --green:#2DA44E;
     --green-soft:rgba(45,164,78,.14);
     --green-border:rgba(45,164,78,.45);
-    /* Vierte Kategorie-Farbe für GWL-Zähler (MID), siehe Niederspannungsnetz-Schema-Vorgaben.md */
-    --violet:#A371F7;
-    --violet-soft:rgba(163,113,247,.14);
-    --violet-border:rgba(163,113,247,.45);
-    --blue:#58A6FF;
-    --blue-soft:rgba(88,166,255,.14);
-    --blue-border:rgba(88,166,255,.45);
     --sans:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     --mono:ui-monospace,'SF Mono','Cascadia Code','Menlo','Consolas',monospace;
-    --grid:5mm; /* 1 Rasterfeld, siehe Frontend-Vorgaben.md "Layout & Linien" */
+    --raster:5mm; /* 1 Rasterfeld, siehe Frontend-Vorgaben.md "Layout & Linien" */
   }
   *,*::before,*::after{box-sizing:border-box;}
   html{background:var(--bg);}
   body{
-    margin:0;background:var(--bg);color:var(--textPrimary);
+    margin:0;background:var(--bg);color:var(--text);
     font-family:var(--sans);line-height:1.6;font-size:16px;
     -webkit-font-smoothing:antialiased;
   }
   a{color:var(--gold);}
   .page{max-width:1180px;margin:0 auto;padding:0 24px;}
 
-  /* ---------- KOPFZEILE (Pflicht-Vorgabe, siehe Frontend-Vorgaben.md "Kopfzeile" + Punkt 9
-     "Kein Neuerfinden des Rastersystems") ----------
-     1:1 aus globale vorgaben/Frontend/Vorgaben-Kontrollseite.html übernommen: gebordete,
-     abgerundete Box mit exaktem Raster-Spalten-Schema 9/12/15/12/9 (Logo/Lücke/Claim/Lücke/
-     Login), Claim in Gold, Login-Spalte gleich breit wie Logo-Spalte. Ab 900px weicht das auf
-     ein flexibles 3-Spalten-Layout aus, damit die Kopfzeile auf schmalen Screens nicht überläuft
-     (die Vorlage selbst ist nicht responsive getestet; "responsive bis Mobile" ist Teil
-     derselben Vorgabe, siehe Design-Prinzipien). */
-  .gwl-header-outer{max-width:1180px;margin:0 auto;padding:24px 24px 0;}
-  .gwl-header{
-    display:grid;
-    grid-template-columns:
-      calc(var(--grid)*9) calc(var(--grid)*12) calc(var(--grid)*15)
-      calc(var(--grid)*12) calc(var(--grid)*9);
-    align-items:center;justify-content:center;
-    border:1px solid var(--border);border-radius:var(--grid);
-    padding:var(--grid) calc(var(--grid)*2);
-    max-width:100%;
+  /* ---------- KOPFZEILE (Pflicht-Vorgabe, siehe Frontend-Vorgaben.md "Kopfzeile") ----------
+     Links Logo, mittig Slogan "GRID WITHOUT LIMITS", rechts Login — fix und in jedem
+     Frontend-Projekt identisch, kein projektspezifisches Abweichen. Logo-Box 9/2 Rasterfelder
+     (Breite/Höhe) laut "Layout & Linien". */
+  .gwl-header{border-bottom:1px solid var(--border);background:var(--bg);}
+  .gwl-header-grid{
+    max-width:1180px;margin:0 auto;padding:0 24px;min-height:64px;
+    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;
   }
-  .header-logo{grid-column:1;display:flex;align-items:center;justify-content:flex-start;}
-  .header-logo .logo-box{width:calc(var(--grid)*9);height:calc(var(--grid)*2);display:flex;align-items:center;}
-  .header-logo img{height:100%;width:auto;display:block;}
-  .header-claim{
-    grid-column:3;width:calc(var(--grid)*15);height:calc(var(--grid)*2);
-    display:flex;align-items:center;justify-content:center;
-    font-size:38px;line-height:1;font-weight:600;letter-spacing:.02em;
-    white-space:nowrap;color:var(--gold);text-transform:uppercase;
+  .gwl-logo-box{justify-self:start;height:calc(var(--raster)*2);width:calc(var(--raster)*9);display:flex;align-items:center;}
+  .gwl-logo-box img{height:100%;width:auto;display:block;}
+  .gwl-claim{
+    justify-self:center;font-size:15px;font-weight:700;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--text);white-space:nowrap;
   }
-  .header-login{grid-column:5;height:calc(var(--grid)*2);}
-  .header-login a{
-    display:flex;align-items:center;justify-content:center;width:100%;height:100%;
-    color:var(--textPrimary);text-decoration:none;font-size:14px;font-weight:600;
+  .gwl-login-box{
+    justify-self:end;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--text);text-decoration:none;border:1px solid var(--border);border-radius:999px;
+    padding:8px 20px;transition:border-color .15s,color .15s;
   }
-  .header-login a:hover{color:var(--gold);}
-  @media (max-width:900px){
-    .gwl-header{grid-template-columns:1fr auto 1fr;padding:12px 16px;gap:16px;}
-    .header-logo{grid-column:1;}
-    .header-claim{grid-column:2;width:auto;height:auto;font-size:13px;letter-spacing:.1em;}
-    .header-login{grid-column:3;}
-  }
+  .gwl-login-box:hover{border-color:var(--gold-border);color:var(--gold);}
 
   /* Pflicht-Seitentitel direkt unter der Kopfzeile (Frontend-Vorgaben.md "Kopfzeile"):
      zentriert auf der Symmetrieachse, volle Bildschirmbreite, 2 Rasterfelder hoch. */
   .page-title-bar{
-    width:100%;min-height:calc(var(--grid)*2);border-bottom:1px solid var(--border);
+    width:100%;min-height:calc(var(--raster)*2);border-bottom:1px solid var(--border);
     background:var(--surface);display:flex;align-items:center;justify-content:center;
     padding:8px 24px;
   }
-  .page-title{margin:0;font-size:clamp(24px,4vw,38px);line-height:1;font-weight:800;letter-spacing:-0.01em;color:var(--textPrimary);}
+  .page-title{margin:0;font-size:clamp(24px,4vw,38px);line-height:1;font-weight:800;letter-spacing:-0.01em;color:var(--text);}
   h1,h2,h3{text-wrap:balance;margin:0;font-weight:800;letter-spacing:-0.01em;}
   p{margin:0;}
   .eyebrow{
@@ -131,70 +100,68 @@
   }
   .hero-inner{position:relative;max-width:760px;}
   h2.headline{font-size:clamp(33.6px,4.4vw,51.2px);line-height:1.12;margin-top:22px;}
-  .lede{margin-top:22px;font-size:18.24px;color:var(--textSecondary);max-width:62ch;}
-  .lede strong{color:var(--textPrimary);font-weight:600;}
+  .lede{margin-top:22px;font-size:18.24px;color:var(--text-secondary);max-width:62ch;}
+  .lede strong{color:var(--text);font-weight:600;}
 
   .stat-strip{
     margin-top:44px;display:flex;flex-wrap:wrap;gap:0;
-    border:1px solid var(--border);border-radius:var(--grid);overflow:hidden;background:var(--surface);
+    border:1px solid var(--border);border-radius:var(--raster);overflow:hidden;background:var(--surface);
   }
   .stat{flex:1 1 160px;padding:20px 24px;border-right:1px solid var(--border);}
   .stat:last-child{border-right:none;}
   .stat .num{font-family:var(--mono);font-size:30.4px;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;}
   .stat .num.text{font-size:18.4px;line-height:1.3;}
-  .stat .label{margin-top:4px;font-size:13.12px;color:var(--textSecondary);}
-  .stat-source{margin-top:10px;font-size:12.48px;color:var(--textSecondary);font-style:italic;}
+  .stat .label{margin-top:4px;font-size:13.12px;color:var(--text-secondary);}
+  .stat-source{margin-top:10px;font-size:12.48px;color:var(--text-secondary);font-style:italic;}
 
   /* ---------- SECTIONS ---------- */
   section{padding:88px 0;border-bottom:1px solid var(--border);}
   section:last-of-type{border-bottom:none;}
   .section-head{max-width:640px;margin-bottom:48px;}
   .section-head h2{font-size:clamp(24px,2.6vw,32px);}
-  .section-head p{margin-top:14px;color:var(--textSecondary);font-size:16.32px;}
+  .section-head p{margin-top:14px;color:var(--text-secondary);font-size:16.32px;}
 
   /* value cards */
   .value-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
-  .value-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--grid);padding:26px;transition:transform .15s,border-color .15s;}
+  .value-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--raster);padding:26px;transition:transform .15s,border-color .15s;}
   .value-card:hover{transform:translateY(-3px);border-color:var(--gold-border);}
   .value-card svg.icon{color:var(--gold);}
   .value-card h3{font-size:17.28px;margin-top:16px;}
-  .value-card p{margin-top:10px;color:var(--textSecondary);font-size:15.04px;}
+  .value-card p{margin-top:10px;color:var(--text-secondary);font-size:15.04px;}
 
-  .legend-row{display:flex;flex-wrap:wrap;gap:18px;margin-top:20px;font-size:13.44px;color:var(--textSecondary);}
+  .legend-row{display:flex;flex-wrap:wrap;gap:18px;margin-top:20px;font-size:13.44px;color:var(--text-secondary);}
   .legend-row span{display:inline-flex;align-items:center;gap:8px;}
-  .swatch{width:13px;height:13px;border-radius:var(--grid);display:inline-block;border:1px solid var(--border);}
-  .swatch.mid{background:var(--violet-soft);border-color:var(--violet);}
+  .swatch{width:13px;height:13px;border-radius:var(--raster);display:inline-block;border:1px solid var(--border);}
+  .swatch.mid{background:var(--green-soft);border-color:var(--green);}
   .swatch.ems{background:var(--gold-soft);border-color:var(--gold);}
-  .swatch.erzeuger{background:var(--green-soft);border-color:var(--green);}
-  .swatch.netz{background:var(--blue-soft);border-color:var(--blue);}
-  .swatch.neutral{background:var(--surfaceHover);border-color:var(--border);}
+  .swatch.neutral{background:var(--surface-hover);border-color:var(--border);}
 
   /* ---------- KONFIGURATOR ---------- */
   .config-controls{
     display:flex;flex-direction:column;gap:22px;
-    background:var(--surface);border:1px solid var(--border);border-radius:var(--grid);
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--raster);
     padding:24px 26px;margin-top:24px;
   }
   .field-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;}
   .field{display:flex;flex-direction:column;gap:10px;}
-  .field-label{font-size:13.76px;font-weight:600;color:var(--textPrimary);}
-  .stepper{display:flex;align-items:center;border:1px solid var(--border);border-radius:var(--grid);overflow:hidden;background:var(--surfaceHover);width:fit-content;}
+  .field-label{font-size:13.76px;font-weight:600;color:var(--text);}
+  .stepper{display:flex;align-items:center;border:1px solid var(--border);border-radius:var(--raster);overflow:hidden;background:var(--surface-hover);width:fit-content;}
   .stepper[hidden]{display:none;}
-  .step-btn{width:34px;height:34px;border:none;background:transparent;color:var(--textSecondary);font-size:18.4px;font-weight:700;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;}
+  .step-btn{width:34px;height:34px;border:none;background:transparent;color:var(--text-secondary);font-size:18.4px;font-weight:700;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;}
   .step-btn:hover:not(:disabled){background:var(--gold-soft);color:var(--gold);}
   .step-btn:focus-visible{outline:2px solid var(--gold);outline-offset:-2px;}
   .step-btn:disabled{opacity:.35;cursor:not-allowed;}
-  .field-value{min-width:34px;text-align:center;font-family:var(--mono);font-weight:700;font-size:16.8px;color:var(--textPrimary);padding:0 4px;font-variant-numeric:tabular-nums;}
+  .field-value{min-width:34px;text-align:center;font-family:var(--mono);font-weight:700;font-size:16.8px;color:var(--text);padding:0 4px;font-variant-numeric:tabular-nums;}
   .btn-add{
-    width:fit-content;background:transparent;border:1px dashed var(--border);border-radius:var(--grid);
-    padding:8px 14px;font-size:13.12px;font-weight:600;color:var(--textSecondary);
+    width:fit-content;background:transparent;border:1px dashed var(--border);border-radius:var(--raster);
+    padding:8px 14px;font-size:13.12px;font-weight:600;color:var(--text-secondary);
     cursor:pointer;transition:border-color .15s,color .15s,background .15s;
   }
   .btn-add:hover{border-color:var(--gold-border);color:var(--gold);background:var(--gold-soft);}
   .btn-add:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
   .btn-toggle{
-    width:fit-content;background:transparent;border:1px solid var(--border);border-radius:var(--grid);
-    padding:8px 14px;font-size:13.12px;font-weight:600;color:var(--textSecondary);
+    width:fit-content;background:transparent;border:1px solid var(--border);border-radius:var(--raster);
+    padding:8px 14px;font-size:13.12px;font-weight:600;color:var(--text-secondary);
     cursor:pointer;transition:border-color .15s,color .15s,background .15s;
   }
   .btn-toggle:hover{border-color:var(--gold-border);}
@@ -207,11 +174,11 @@
   .config-note{margin-top:10px;}
 
   .diagram-layout{display:grid;grid-template-columns:1fr 320px;gap:28px;margin-top:28px;align-items:start;}
-  .diagram-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:var(--grid);background:var(--surface);padding:20px 12px;}
-  .scroll-hint{display:none;font-size:12.48px;color:var(--textSecondary);margin:0 0 10px;font-style:italic;}
+  .diagram-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:var(--raster);background:var(--surface);padding:20px 12px;}
+  .scroll-hint{display:none;font-size:12.48px;color:var(--text-secondary);margin:0 0 10px;font-style:italic;}
   @media (max-width:760px){ .scroll-hint{display:block;} }
   figure{margin:0;}
-  figcaption{margin-top:14px;padding:0 8px;font-size:13.76px;color:var(--textSecondary);}
+  figcaption{margin-top:14px;padding:0 8px;font-size:13.76px;color:var(--text-secondary);}
   svg.schema{display:block;margin:0 auto;}
 
   .node .box{cursor:pointer;transition:stroke .15s,stroke-width .15s;}
@@ -221,7 +188,7 @@
 
   aside.detail-panel{
     position:sticky;top:20px;background:var(--surface);border:1px solid var(--border);
-    border-radius:var(--grid);padding:24px;min-height:280px;
+    border-radius:var(--raster);padding:24px;min-height:280px;
   }
   aside.detail-panel h3{font-size:17.6px;}
   aside.detail-panel .badges{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
@@ -231,30 +198,30 @@
   }
   .pill.mid{color:var(--green);background:var(--green-soft);border-color:var(--green-border);}
   .pill.ems{color:var(--gold);background:var(--gold-soft);border-color:var(--gold-border);}
-  aside.detail-panel p{margin-top:14px;color:var(--textSecondary);font-size:15.04px;}
-  aside.detail-panel .hint{color:var(--textSecondary);font-size:15.04px;}
+  aside.detail-panel p{margin-top:14px;color:var(--text-secondary);font-size:15.04px;}
+  aside.detail-panel .hint{color:var(--text-secondary);font-size:15.04px;}
 
   /* billing steps */
   .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
-  .step-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--grid);padding:22px;position:relative;transition:transform .15s,border-color .15s;}
+  .step-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--raster);padding:22px;position:relative;transition:transform .15s,border-color .15s;}
   .step-card:hover{transform:translateY(-3px);border-color:var(--gold-border);}
   .step-card .step-no{font-family:var(--mono);font-size:12.48px;color:var(--gold);font-weight:700;letter-spacing:.05em;}
   .step-card h3{font-size:16.32px;margin-top:10px;}
-  .step-card p{margin-top:8px;font-size:14.08px;color:var(--textSecondary);}
+  .step-card p{margin-top:8px;font-size:14.08px;color:var(--text-secondary);}
 
   .compare{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:52px;}
-  .compare-col{border-radius:var(--grid);padding:26px 26px 22px;border:1px solid var(--border);background:var(--surface);}
+  .compare-col{border-radius:var(--raster);padding:26px 26px 22px;border:1px solid var(--border);background:var(--surface);}
   .compare-col.win{border-color:var(--gold);background:linear-gradient(180deg,var(--gold-soft),var(--surface) 60%);}
-  .compare-col h4{font-size:12.48px;text-transform:uppercase;letter-spacing:.1em;color:var(--textSecondary);font-weight:700;}
+  .compare-col h4{font-size:12.48px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-secondary);font-weight:700;}
   .compare-col.win h4{color:var(--gold);}
   .compare-col ul{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:12px;}
-  .compare-col li{display:flex;gap:10px;align-items:flex-start;font-size:14.72px;color:var(--textSecondary);}
-  .compare-col.win li{color:var(--textPrimary);}
+  .compare-col li{display:flex;gap:10px;align-items:flex-start;font-size:14.72px;color:var(--text-secondary);}
+  .compare-col.win li{color:var(--text);}
   .compare-col svg.mark{flex:none;margin-top:2px;}
 
   footer{padding:48px 0 64px;}
-  footer p{color:var(--textSecondary);font-size:13.76px;max-width:60ch;}
-  footer .brand{font-family:var(--mono);color:var(--textPrimary);font-weight:600;margin-bottom:8px;display:block;}
+  footer p{color:var(--text-secondary);font-size:13.76px;max-width:60ch;}
+  footer .brand{font-family:var(--mono);color:var(--text);font-weight:600;margin-bottom:8px;display:block;}
 
   @media (max-width:860px){
     .diagram-layout{grid-template-columns:1fr;}
@@ -267,29 +234,25 @@
     *{transition:none !important;animation:none !important;}
   }
 
-  /* ---------- DEV-RASTER (nur vor Freigabe, siehe Frontend-Vorgaben Punkt 9) ----------
-     1:1 aus Vorgaben-Kontrollseite.html übernommen: body.dev-grid-Klasse + Pseudo-Elemente
-     statt eigenem Overlay-Div. background-position schiebt die Raster-Linien exakt auf die
-     Symmetrieachse (50%), statt vom linken Rand aus zu zählen. */
-  body.dev-grid::before{
-    content:"";position:fixed;inset:0;pointer-events:none;z-index:999;
+  /* ---------- DEV-RASTER (nur vor Freigabe, siehe Frontend-Vorgaben) ---------- */
+  .dev-grid-overlay{
+    position:fixed;inset:0;z-index:9999;pointer-events:none;
     background-image:
-      linear-gradient(to right, rgba(139,148,158,.35) .5px, transparent .5px),
-      linear-gradient(to bottom, rgba(139,148,158,.35) .5px, transparent .5px);
-    background-size:var(--grid) var(--grid);
-    background-position:calc(50% + var(--grid) / 2) 0;
+      linear-gradient(rgba(227,160,8,.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(227,160,8,.18) 1px, transparent 1px);
+    background-size:5mm 5mm;
   }
-  body.dev-grid::after{
-    content:"";position:fixed;top:0;bottom:0;left:50%;width:1px;
-    background:rgba(45,164,78,.9);pointer-events:none;z-index:1000;
+  .dev-grid-overlay::after{
+    content:"";position:absolute;top:0;bottom:0;left:50%;width:1px;
+    background:rgba(45,164,78,.65);
   }
-  .toggle-bar{
-    position:fixed;top:var(--grid);right:var(--grid);z-index:1001;
-    background:var(--surface);border:1px solid var(--border);border-radius:var(--grid);
-    padding:calc(var(--grid)*.6) var(--grid);font-size:13px;color:var(--textSecondary);
-    display:flex;align-items:center;gap:8px;
+  .dev-grid-toggle{
+    position:fixed;right:14px;bottom:14px;z-index:10000;
+    font-family:var(--mono);font-size:11.52px;letter-spacing:.06em;
+    color:var(--text);background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--raster);padding:6px 10px;cursor:pointer;
   }
-  .toggle-bar label{cursor:pointer;user-select:none;}
+  .dev-grid-toggle:hover{background:var(--surface-hover);}
 
   /* ---------- COOKIE-BANNER (Pflicht-Vorgabe, siehe Frontend-Vorgaben.md) ----------
      Einfacher Ein-Button-Hinweis, da diese Seite keine optionalen Cookies setzt. */
@@ -302,7 +265,7 @@
   .cookie-banner-inner{
     max-width:720px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:12px;
   }
-  .cookie-banner-text{flex:1 1 260px;margin:0;font-size:12.5px;color:var(--textSecondary);line-height:1.5;}
+  .cookie-banner-text{flex:1 1 260px;margin:0;font-size:12.5px;color:var(--text-secondary);line-height:1.5;}
   .cookie-banner-text a{color:var(--gold);text-decoration:none;border-bottom:1px solid var(--gold);}
   .cookie-banner-confirm{
     flex-shrink:0;background:var(--gold);border:none;border-radius:999px;
@@ -311,29 +274,33 @@
   .cookie-banner-confirm:hover{opacity:.9;}
   .cookie-banner-confirm:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
 </style>
-</head>
-<body>
 
-<!-- DEV-ONLY: Ausrichtungs-Raster (5mm) + Symmetrieachse nach Frontend-Vorgaben Punkt 9,
-     1:1 aus Vorgaben-Kontrollseite.html. Vor dem Live-Gang diesen Block + den zugehörigen
-     CSS-Abschnitt oben entfernen. -->
-<div class="toggle-bar">
-  <input type="checkbox" id="gridToggle" checked onchange="document.body.classList.toggle('dev-grid', this.checked)">
-  <label for="gridToggle">Dev-Grid (5mm-Raster + Symmetrieachse)</label>
-</div>
-<script>document.body.classList.add('dev-grid');</script>
+<!-- DEV-ONLY: Ausrichtungs-Raster (5mm) + Symmetrieachse nach Frontend-Vorgaben.
+     Vor dem Live-Gang diesen Block + den zugehörigen CSS-Abschnitt oben entfernen. -->
+<div class="dev-grid-overlay" id="devGridOverlay" aria-hidden="true"></div>
+<button type="button" class="dev-grid-toggle" id="devGridToggle">Raster: an</button>
+<script>
+(function(){
+  var overlay = document.getElementById('devGridOverlay');
+  var btn = document.getElementById('devGridToggle');
+  var on = true;
+  btn.addEventListener('click', function(){
+    on = !on;
+    overlay.style.display = on ? 'block' : 'none';
+    btn.textContent = 'Raster: ' + (on ? 'an' : 'aus');
+  });
+})();
+</script>
 
-<div class="gwl-header-outer">
-  <header class="gwl-header">
-    <div class="header-logo">
-      <a class="logo-box" href="/" aria-label="Zur Startseite">
-        <img src="assets/gwl-logo.svg" alt="GWL-Design">
-      </a>
-    </div>
-    <div class="header-claim">Grid Without Limits</div>
-    <div class="header-login"><a href="#">Login</a></div>
-  </header>
-</div>
+<header class="gwl-header">
+  <div class="gwl-header-grid">
+    <a class="gwl-logo-box" href="/" aria-label="Zur Startseite">
+      <img src="assets/gwl-logo.svg" alt="GWL-Design">
+    </a>
+    <div class="gwl-claim">Grid Without Limits</div>
+    <a class="gwl-login-box" href="#">Login</a>
+  </div>
+</header>
 <div class="page-title-bar">
   <h1 class="page-title">Mieterstrom</h1>
 </div>
@@ -429,10 +396,8 @@
       </div>
 
       <div class="legend-row">
-        <span><i class="swatch netz"></i>Netz &amp; Messstellenbetreiber</span>
-        <span><i class="swatch mid"></i>GWL-Zähler — geeicht, abrechnungsrelevant</span>
-        <span><i class="swatch erzeuger"></i>Energieerzeuger — PV &amp; Speicher</span>
-        <span><i class="swatch ems"></i>PlexLog — Energiemanager</span>
+        <span><i class="swatch mid"></i>MID-Zähler — geeicht, abrechnungsrelevant</span>
+        <span><i class="swatch ems"></i>GWL-Technik — PlexLog &amp; PV-Anlage</span>
         <span><i class="swatch neutral"></i>Verbraucher / Struktur</span>
       </div>
 
@@ -720,12 +685,8 @@
     for(var k in (attrs||{})){ base[k] = attrs[k]; }
     return svgNode('line', base);
   }
-  // Farbkategorien laut Niederspannungsnetz-Schema-Vorgaben.md (Stand 2026-09-14):
-  // mid=GWL-Zähler (violett), erzeuger=PV/WR/Speicher (grün), ems=nur PlexLog (gold),
-  // grid=Netz/Messstellenbetreiber (blau).
   var styleFor = {
-    mid: { fill:'rgba(163,113,247,.14)', stroke:'#A371F7', sw:'1.6' },
-    erzeuger: { fill:'rgba(45,164,78,.14)', stroke:'#2DA44E', sw:'1.6' },
+    mid: { fill:'rgba(45,164,78,.14)', stroke:'#2DA44E', sw:'1.6' },
     ems: { fill:'rgba(227,160,8,.13)', stroke:'#E3A008', sw:'1.6' },
     neutral: { fill:'#1C222B', stroke:'#30363D', sw:'1.5' },
     grid: { fill:'rgba(88,166,255,.14)', stroke:'#58A6FF', sw:'1.6' },
@@ -736,15 +697,8 @@
   function makeNode(dataKey, ariaLabel, cat, rectAttrs, lines){
     var g = svgNode('g', {'class':'node', tabindex:'0', role:'button', 'aria-label':ariaLabel, 'data-key':dataKey});
     var s = styleFor[cat];
-    // Eck-Radius = 1 Rastermaß (5mm), wie alle Felder auf der Seite (Vorgaben-Review).
-    var rectFull = {'class':'box', rx: rectAttrs.rx || RASTER, fill:s.fill, stroke:s.stroke, 'stroke-width':s.sw};
+    var rectFull = {'class':'box', rx: rectAttrs.rx || 10, fill:s.fill, stroke:s.stroke, 'stroke-width':s.sw};
     for(var k in rectAttrs){ rectFull[k] = rectAttrs[k]; }
-    // Blickdichte Unterlage in Seitenhintergrundfarbe unter der (teils transparenten) Box —
-    // verhindert, dass Elemente dahinter (z. B. die Kupferschiene der Hauptverteilung) sichtbar
-    // durchscheinen, ohne die transparente Optik der Box selbst zu verändern (Vorgaben-Review:
-    // "Überdeckungen von Feldern").
-    var backing = {x:rectFull.x, y:rectFull.y, width:rectFull.width, height:rectFull.height, rx:rectFull.rx, fill:'var(--bg)'};
-    g.appendChild(svgNode('rect', backing));
     g.appendChild(svgNode('rect', rectFull));
     var cx = rectAttrs.x + rectAttrs.width/2;
     lines.forEach(function(l){
@@ -761,7 +715,7 @@
   function makeBusShape(hx0, hy0, hWidth, hHeight, stemCx, stemHalfW, stemBottom, textY){
     var hx1 = hx0 + hWidth, hy1 = hy0 + hHeight;
     var vx0 = stemCx - stemHalfW, vx1 = stemCx + stemHalfW;
-    var rTop = RASTER, rStem = RASTER; // Eck-Radius = 1 Rastermaß (Frontend-Vorgaben "Layout & Linien")
+    var rTop = RASTER, rStem = 6; // Eck-Radius = 1 Rastermaß (Frontend-Vorgaben "Layout & Linien")
     var d = [
       'M', (hx0 + rTop), hy0,
       'L', (hx1 - rTop), hy0,
@@ -861,11 +815,7 @@
     // Raster" (Vorgaben-Review). Halbe Rastermaße (z. B. 1,5R) sind als feinere Unterteilung
     // desselben Rasters zulässig und bereits an anderer Stelle in der Vorgabe etabliert. ----------
     var mainW = 10*RASTER, mainH = 3*RASTER, mainHalfW = mainW/2; // Netz/HAK/Zähler(MSB)/Hauptzähler
-    // Ganzzahliges Rastermaß, nicht 1,5×: jede halbe Raster-Lücke kippt die Y-Position aller
-    // nachfolgenden Felder auf eine halbe Rasterlinie statt auf eine ganze — bei mehreren
-    // solchen Lücken hintereinander landet dann nur noch jedes zweite Feld auf dem Raster
-    // (Vorgaben-Review: "Felder nicht auf dem Raster", vertikal).
-    var gapChain = 2*RASTER; // alle vier Lücken der Hauptkette, einheitlich
+    var gapChain = 1.5*RASTER; // alle vier Lücken der Hauptkette, einheitlich
 
     // Hauptreihe (Netz/Zähler links, PV/Wechselrichter rechts) legt Lage und Breite der
     // Hauptverteilung fest. Lücke zwischen Hauptzähler und Wechselrichter = 2 Raster (je 1
@@ -895,21 +845,13 @@
     var busBarCenterY = hauptBottom + gapChain + busBarHeight/2;
     var busBarTop = busBarCenterY - busBarHeight/2;
     var busBarBottom = busBarCenterY + busBarHeight/2;
-    // Sammelschiene (Mieter/LIS-Strang) ist 2 Raster breit. Halbe Breite MUSS ein ganzes
-    // Rastermaß sein (nicht RASTER/2) — sonst liegt sie zwar zentriert auf der Symmetrielinie
-    // (die selbst eine Rasterlinie ist), aber ihre Kanten landen genau in der Zellmitte statt
-    // auf der nächsten Rasterlinie (Vorgaben-Review: "Felder liegen nicht auf dem Raster").
-    var stemHalfW = RASTER;
+    var stemHalfW = RASTER/2; // Sammelschiene (Mieter/LIS-Strang) ist exakt 1 Raster breit
 
     // Zählerspalten (Allgemeinstrom/Sonstiges/Wärmepumpe): 2 Raster hoch, 5 Raster breit,
     // 1 Raster Abstand. Der Heizungsabzweig (erste Wärmepumpe) sitzt exakt auf der
     // Symmetrielinie; alle Seiten-Spalten wechseln sich links/rechts davon ab (rank 1, 2, …),
     // sodass die Reihe symmetrisch um die Achse wächst.
-    // colW/enduseW (unten) müssen GERADE Vielfache von RASTER sein: diese Boxen werden über
-    // ihre Mitte positioniert (cx ± Breite/2) — die Mitte liegt auf einer Rasterlinie, bei
-    // ungerader Breite läge die halbe Breite dann auf einer HALBEN Rasterlinie und die Kante
-    // in der Zellmitte statt auf dem Raster (Vorgaben-Review: "Felder liegen nicht auf dem Raster").
-    var colW = 6*RASTER, colH = 2*RASTER, colGap = RASTER;
+    var colW = 5*RASTER, colH = 2*RASTER, colGap = RASTER;
     var colPitch = colW + colGap; // = 6 Raster, Abstand center-zu-center zweier benachbarter Spalten
     sideColumns.forEach(function(col, idx){
       col.side = (idx % 2 === 0) ? 'left' : 'right';
@@ -925,15 +867,8 @@
       ? (symmetryX + colPitch*rightCols.length + colW/2)
       : (centerCol ? symmetryX + colW/2 : symmetryX);
 
-    // Hauptverteilung ist immer spiegelsymmetrisch um die Symmetrielinie — beide Seiten
-    // bekommen den größeren der beiden benötigten Abstände, nicht je Seite ihren eigenen
-    // (sonst wirkt die Schiene schief, sobald eine Seite z. B. durch Wechselrichter/Speicher
-    // weiter reicht als die andere; Vorgaben-Review: "Verteilerschiene nicht symmetrisch").
-    var leftExtent = symmetryX - Math.min(spineCenter - mainHalfW, columnsLeftEdge);
-    var rightExtent = Math.max(pvRightEdge, columnsRightEdge) - symmetryX;
-    var busHalfWidth = Math.max(leftExtent, rightExtent);
-    var x0 = symmetryX - busHalfWidth; // linke Kante Hauptverteilung
-    var busRight = symmetryX + busHalfWidth; // rechte Kante Hauptverteilung
+    var x0 = Math.min(spineCenter - mainHalfW, columnsLeftEdge); // linke Kante Hauptverteilung
+    var busRight = Math.max(pvRightEdge, columnsRightEdge); // rechte Kante Hauptverteilung
     var busWidth = busRight - x0;
 
     // Mieter/Wallbox-Sammelschiene liegt exakt auf der Symmetrielinie — derselbe senkrechte
@@ -944,7 +879,7 @@
     var railX = symmetryX;
     var colTop = busBarBottom + 2*RASTER;
     var colBottom = colTop + colH;
-    var colEnduseTop = colBottom + 2*RASTER; // ganzzahlig, siehe gapChain-Kommentar oben
+    var colEnduseTop = colBottom + 1.5*RASTER;
     var colEnduseH = 3*RASTER;
     var rowPitch = 4*RASTER;
     var maxRows = Math.max(mieterUnits.length, lisUnits.length, 1);
@@ -953,7 +888,7 @@
 
     // Mieter-/LIS-Zähler: 4 Raster breit, 2 Raster hoch; Endverbraucher-Box 5 Raster breit,
     // 2 Raster hoch — je 1 Raster Abstand zur Schiene und zueinander.
-    var chipW = 4*RASTER, chipH = 2*RASTER, enduseW = 6*RASTER, enduseH = 2*RASTER;
+    var chipW = 4*RASTER, chipH = 2*RASTER, enduseW = 5*RASTER, enduseH = 2*RASTER;
     var mieterChipX = railX - stemHalfW - RASTER - chipW;
     var mieterEnduseX = mieterChipX - RASTER - enduseW;
     var lisChipX = railX + stemHalfW + RASTER;
@@ -1014,28 +949,23 @@
       {y:hauptY+26, content: isLarge ? 'Wandlerschrank' : 'Hauptzähler', size:'12.5'},
       {y:hauptY+42, content: mainTag, size:'10.5', weight:'400', fill:'#8B949E', mono:true}
     ]));
-    meterCenters.push({x:spineCenter, y:hauptY+hauptH/2}); // gleiche Zeile wie PlexLog, direkte Linie ohne Umweg
+    meterCenters.push({x:spineCenter, y:hauptY+hauptH/2});
 
-    svg.appendChild(makeNode('pv','PV-Module','erzeuger', {x:pvCenter-mainHalfW,y:zaehlerY,width:mainW,height:2*RASTER}, [
+    svg.appendChild(makeNode('pv','PV-Module','ems', {x:pvCenter-mainHalfW,y:zaehlerY,width:mainW,height:2*RASTER}, [
       {y:zaehlerY+18, content:'PV-Module', size:'12.5'},
       {y:zaehlerY+32, content:'Gleichstrom (DC)', size:'9.5', weight:'400', fill:'#8B949E'}
     ]));
-    svg.appendChild(makeNode('wechselrichter','Wechselrichter','erzeuger', {x:pvCenter-mainHalfW,y:hauptY,width:mainW,height:hauptH}, [
+    svg.appendChild(makeNode('wechselrichter','Wechselrichter','ems', {x:pvCenter-mainHalfW,y:hauptY,width:mainW,height:hauptH}, [
       {y:hauptY+26, content:'Wechselrichter', size:'12.5'},
       {y:hauptY+42, content:'DC → AC', size:'10.5', weight:'400', fill:'#8B949E'}
     ]));
     if(showSpeicher){
-      svg.appendChild(makeNode('speicher','Batteriespeicher','erzeuger', {x:speicherCenter-speicherHalfW,y:hauptY,width:2*speicherHalfW,height:hauptH}, [
+      svg.appendChild(makeNode('speicher','Batteriespeicher','ems', {x:speicherCenter-speicherHalfW,y:hauptY,width:2*speicherHalfW,height:hauptH}, [
         {y:hauptY+26, content:'Speicher', size:'12.5'},
         {y:hauptY+42, content:'DC-gekoppelt', size:'10', weight:'400', fill:'#8B949E'}
       ]));
     }
 
-    // Steg der Hauptverteilung läuft durchgängig bis zur Mieter/LIS-Schiene (keine Lücke —
-    // eine unterbrochene Hauptverteilung wirkt falsch, siehe Vorgaben-Review). Der Wärmepumpen-
-    // Zähler + seine Verbrauchsbox liegen zwar auf demselben Steg, bekommen aber in makeNode()
-    // eine blickdichte Unterlage, damit der Steg nicht sichtbar durchscheint (statt einer
-    // echten Überdeckung zu vermeiden, indem der Steg unterbrochen wird).
     svg.appendChild(makeBusShape(x0, busBarTop, busWidth, busBarHeight, railX, stemHalfW, railBottom, busBarCenterY+5));
 
     function renderColumn(col){
@@ -1045,9 +975,7 @@
       svg.appendChild(makeNode(col.key, col.ariaMeter, 'mid', {x:cx-colW/2,y:colTop,width:colW,height:colH}, [
         {y:colTop+colH/2, content:col.tag, size:'12.5', mono:true}
       ]));
-      // dispatchY: freie Lücke zwischen Hauptverteilung und Spaltenreihe — die PlexLog-Linie
-      // biegt dort ab, statt quer durch Hauptzähler/Wechselrichter zu fahren (Vorgaben-Review).
-      meterCenters.push({x:cx, y:colTop+colH/2, dispatchY:colTop-RASTER});
+      meterCenters.push({x:cx, y:colTop+colH/2});
       var labelLines = splitLabel(col.enduseLabel);
       var textDefs = labelLines.length === 1
         ? [{y:colEnduseTop+31, content:labelLines[0], size:'11'}]
@@ -1066,9 +994,7 @@
       svg.appendChild(makeNode(unit.key, unit.ariaMeter, 'mid', {x:mieterChipX,y:rowY-chipH/2,width:chipW,height:chipH}, [
         {y:rowY+4, content:unit.tag, size:'11', mono:true}
       ]));
-      // dispatchY: freie Lücke oberhalb dieser Zeile (zwischen den Reihen), damit die
-      // PlexLog-Linie nicht durch "Wohnung N" oder andere Zeilen läuft (Vorgaben-Review).
-      meterCenters.push({x:mieterChipX+chipW/2, y:rowY, dispatchY:rowY-rowPitch/2});
+      meterCenters.push({x:mieterChipX+chipW/2, y:rowY});
       svg.appendChild(makeNode(unit.enduseKey, unit.ariaEnduse, 'neutral', {x:mieterEnduseX,y:rowY-enduseH/2,width:enduseW,height:enduseH}, [
         {y:rowY+3, content:unit.enduseLabel, size:'10'}
       ]));
@@ -1081,7 +1007,7 @@
       svg.appendChild(makeNode(unit.key, unit.ariaMeter, 'mid', {x:lisChipX,y:rowY-chipH/2,width:chipW,height:chipH}, [
         {y:rowY+4, content:unit.tag, size:'11', mono:true}
       ]));
-      meterCenters.push({x:lisChipX+chipW/2, y:rowY, dispatchY:rowY-rowPitch/2});
+      meterCenters.push({x:lisChipX+chipW/2, y:rowY});
       svg.appendChild(makeNode(unit.enduseKey, unit.ariaEnduse, 'neutral', {x:lisEnduseX,y:rowY-enduseH/2,width:enduseW,height:enduseH}, [
         {y:rowY+3, content:unit.enduseLabel, size:'10'}
       ]));
@@ -1095,27 +1021,12 @@
     // PlexLog als EMS/HEMS: Strichpunktlinie (Steuer-/Datenverbindung, kein Strompfad) zu
     // jedem GWL-Zähler — unter allen anderen Elementen eingefügt, damit die Boxen optisch
     // darüberliegen und die Linien nur als dezente Signal-Ebene wirken (Vorgaben-Review).
-    // Rechtwinklig geführt, keine Diagonalen. Route über eine feste freie Trasse links der
-    // gesamten Hauptverteilung (x0 deckt per Konstruktion IMMER Hauptzähler UND alle
-    // Zählerspalten ab, siehe busHalfWidth oben — PlexLogs eigene Position allein reicht bei
-    // vielen Spalten nicht mehr, siehe Vorgaben-Review). Erst waagerecht zur Trasse, dann
-    // senkrecht bis zur Lücke zwischen den Reihen ("dispatchY"), dann erst waagerecht auf die
-    // Ziel-Spalte — so kreuzt die Linie nie ein anderes Feld, höchstens die dünne
-    // Hauptverteilungs-Schiene selbst (Vorgaben-Review: "Linien nicht durch Felder überdecken").
+    // Rechtwinklig geführt (erst waagerecht auf die Ziel-Spalte, dann senkrecht zum Zähler) —
+    // keine Diagonalen, wie bei allen anderen Linien im Schema (Vorgaben-Review).
     var plexAnchor = {x:plexRight, y:hauptY+hauptH/2};
-    var trunkX = x0 - RASTER;
     var plexLines = svgNode('g', {'aria-hidden':'true'});
     meterCenters.forEach(function(pt){
-      var d;
-      if(pt.dispatchY === undefined){
-        d = 'M '+plexAnchor.x+' '+plexAnchor.y+' L '+pt.x+' '+pt.y;
-      } else {
-        d = 'M '+plexAnchor.x+' '+plexAnchor.y
-          + ' L '+trunkX+' '+plexAnchor.y
-          + ' L '+trunkX+' '+pt.dispatchY
-          + ' L '+pt.x+' '+pt.dispatchY
-          + ' L '+pt.x+' '+pt.y;
-      }
+      var d = 'M '+plexAnchor.x+' '+plexAnchor.y+' L '+pt.x+' '+plexAnchor.y+' L '+pt.x+' '+pt.y;
       plexLines.appendChild(svgNode('path', {
         d:d, fill:'none',
         stroke:'#E3A008', 'stroke-width':'1', 'stroke-dasharray':'6 3 1.5 3',
@@ -1159,7 +1070,7 @@
     if(!centeringInProgress){ centerDiagramOnViewport(); }
   }
 
-  // DEV-ONLY: Symmetrielinie liegt fix in der Bildschirmmitte (CSS, siehe body.dev-grid::after).
+  // DEV-ONLY: Symmetrielinie liegt fix in der Bildschirmmitte (CSS, siehe .dev-grid-overlay::after).
   // Diese Funktion justiert stattdessen die Hauptreihe des Diagramms nach, damit die Lücke
   // zwischen Hauptzähler und Wechselrichter mittig zu dieser Linie liegt (je 1 Raster Abstand).
   function centerDiagramOnViewport(){
@@ -1252,5 +1163,3 @@
   render();
 })();
 </script>
-</body>
-</html>

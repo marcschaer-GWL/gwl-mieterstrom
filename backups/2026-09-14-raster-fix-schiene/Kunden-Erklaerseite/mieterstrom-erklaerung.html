@@ -28,13 +28,6 @@
     --green:#2DA44E;
     --green-soft:rgba(45,164,78,.14);
     --green-border:rgba(45,164,78,.45);
-    /* Vierte Kategorie-Farbe für GWL-Zähler (MID), siehe Niederspannungsnetz-Schema-Vorgaben.md */
-    --violet:#A371F7;
-    --violet-soft:rgba(163,113,247,.14);
-    --violet-border:rgba(163,113,247,.45);
-    --blue:#58A6FF;
-    --blue-soft:rgba(88,166,255,.14);
-    --blue-border:rgba(88,166,255,.45);
     --sans:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     --mono:ui-monospace,'SF Mono','Cascadia Code','Menlo','Consolas',monospace;
     --grid:5mm; /* 1 Rasterfeld, siehe Frontend-Vorgaben.md "Layout & Linien" */
@@ -163,10 +156,8 @@
   .legend-row{display:flex;flex-wrap:wrap;gap:18px;margin-top:20px;font-size:13.44px;color:var(--textSecondary);}
   .legend-row span{display:inline-flex;align-items:center;gap:8px;}
   .swatch{width:13px;height:13px;border-radius:var(--grid);display:inline-block;border:1px solid var(--border);}
-  .swatch.mid{background:var(--violet-soft);border-color:var(--violet);}
+  .swatch.mid{background:var(--green-soft);border-color:var(--green);}
   .swatch.ems{background:var(--gold-soft);border-color:var(--gold);}
-  .swatch.erzeuger{background:var(--green-soft);border-color:var(--green);}
-  .swatch.netz{background:var(--blue-soft);border-color:var(--blue);}
   .swatch.neutral{background:var(--surfaceHover);border-color:var(--border);}
 
   /* ---------- KONFIGURATOR ---------- */
@@ -274,8 +265,8 @@
   body.dev-grid::before{
     content:"";position:fixed;inset:0;pointer-events:none;z-index:999;
     background-image:
-      linear-gradient(to right, rgba(139,148,158,.35) .5px, transparent .5px),
-      linear-gradient(to bottom, rgba(139,148,158,.35) .5px, transparent .5px);
+      linear-gradient(to right, rgba(227,160,8,.35) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(227,160,8,.35) 1px, transparent 1px);
     background-size:var(--grid) var(--grid);
     background-position:calc(50% + var(--grid) / 2) 0;
   }
@@ -429,10 +420,8 @@
       </div>
 
       <div class="legend-row">
-        <span><i class="swatch netz"></i>Netz &amp; Messstellenbetreiber</span>
-        <span><i class="swatch mid"></i>GWL-Zähler — geeicht, abrechnungsrelevant</span>
-        <span><i class="swatch erzeuger"></i>Energieerzeuger — PV &amp; Speicher</span>
-        <span><i class="swatch ems"></i>PlexLog — Energiemanager</span>
+        <span><i class="swatch mid"></i>MID-Zähler — geeicht, abrechnungsrelevant</span>
+        <span><i class="swatch ems"></i>GWL-Technik — PlexLog &amp; PV-Anlage</span>
         <span><i class="swatch neutral"></i>Verbraucher / Struktur</span>
       </div>
 
@@ -720,12 +709,8 @@
     for(var k in (attrs||{})){ base[k] = attrs[k]; }
     return svgNode('line', base);
   }
-  // Farbkategorien laut Niederspannungsnetz-Schema-Vorgaben.md (Stand 2026-09-14):
-  // mid=GWL-Zähler (violett), erzeuger=PV/WR/Speicher (grün), ems=nur PlexLog (gold),
-  // grid=Netz/Messstellenbetreiber (blau).
   var styleFor = {
-    mid: { fill:'rgba(163,113,247,.14)', stroke:'#A371F7', sw:'1.6' },
-    erzeuger: { fill:'rgba(45,164,78,.14)', stroke:'#2DA44E', sw:'1.6' },
+    mid: { fill:'rgba(45,164,78,.14)', stroke:'#2DA44E', sw:'1.6' },
     ems: { fill:'rgba(227,160,8,.13)', stroke:'#E3A008', sw:'1.6' },
     neutral: { fill:'#1C222B', stroke:'#30363D', sw:'1.5' },
     grid: { fill:'rgba(88,166,255,.14)', stroke:'#58A6FF', sw:'1.6' },
@@ -739,12 +724,6 @@
     // Eck-Radius = 1 Rastermaß (5mm), wie alle Felder auf der Seite (Vorgaben-Review).
     var rectFull = {'class':'box', rx: rectAttrs.rx || RASTER, fill:s.fill, stroke:s.stroke, 'stroke-width':s.sw};
     for(var k in rectAttrs){ rectFull[k] = rectAttrs[k]; }
-    // Blickdichte Unterlage in Seitenhintergrundfarbe unter der (teils transparenten) Box —
-    // verhindert, dass Elemente dahinter (z. B. die Kupferschiene der Hauptverteilung) sichtbar
-    // durchscheinen, ohne die transparente Optik der Box selbst zu verändern (Vorgaben-Review:
-    // "Überdeckungen von Feldern").
-    var backing = {x:rectFull.x, y:rectFull.y, width:rectFull.width, height:rectFull.height, rx:rectFull.rx, fill:'var(--bg)'};
-    g.appendChild(svgNode('rect', backing));
     g.appendChild(svgNode('rect', rectFull));
     var cx = rectAttrs.x + rectAttrs.width/2;
     lines.forEach(function(l){
@@ -761,7 +740,7 @@
   function makeBusShape(hx0, hy0, hWidth, hHeight, stemCx, stemHalfW, stemBottom, textY){
     var hx1 = hx0 + hWidth, hy1 = hy0 + hHeight;
     var vx0 = stemCx - stemHalfW, vx1 = stemCx + stemHalfW;
-    var rTop = RASTER, rStem = RASTER; // Eck-Radius = 1 Rastermaß (Frontend-Vorgaben "Layout & Linien")
+    var rTop = RASTER, rStem = 6; // Eck-Radius = 1 Rastermaß (Frontend-Vorgaben "Layout & Linien")
     var d = [
       'M', (hx0 + rTop), hy0,
       'L', (hx1 - rTop), hy0,
@@ -861,11 +840,7 @@
     // Raster" (Vorgaben-Review). Halbe Rastermaße (z. B. 1,5R) sind als feinere Unterteilung
     // desselben Rasters zulässig und bereits an anderer Stelle in der Vorgabe etabliert. ----------
     var mainW = 10*RASTER, mainH = 3*RASTER, mainHalfW = mainW/2; // Netz/HAK/Zähler(MSB)/Hauptzähler
-    // Ganzzahliges Rastermaß, nicht 1,5×: jede halbe Raster-Lücke kippt die Y-Position aller
-    // nachfolgenden Felder auf eine halbe Rasterlinie statt auf eine ganze — bei mehreren
-    // solchen Lücken hintereinander landet dann nur noch jedes zweite Feld auf dem Raster
-    // (Vorgaben-Review: "Felder nicht auf dem Raster", vertikal).
-    var gapChain = 2*RASTER; // alle vier Lücken der Hauptkette, einheitlich
+    var gapChain = 1.5*RASTER; // alle vier Lücken der Hauptkette, einheitlich
 
     // Hauptreihe (Netz/Zähler links, PV/Wechselrichter rechts) legt Lage und Breite der
     // Hauptverteilung fest. Lücke zwischen Hauptzähler und Wechselrichter = 2 Raster (je 1
@@ -895,21 +870,13 @@
     var busBarCenterY = hauptBottom + gapChain + busBarHeight/2;
     var busBarTop = busBarCenterY - busBarHeight/2;
     var busBarBottom = busBarCenterY + busBarHeight/2;
-    // Sammelschiene (Mieter/LIS-Strang) ist 2 Raster breit. Halbe Breite MUSS ein ganzes
-    // Rastermaß sein (nicht RASTER/2) — sonst liegt sie zwar zentriert auf der Symmetrielinie
-    // (die selbst eine Rasterlinie ist), aber ihre Kanten landen genau in der Zellmitte statt
-    // auf der nächsten Rasterlinie (Vorgaben-Review: "Felder liegen nicht auf dem Raster").
-    var stemHalfW = RASTER;
+    var stemHalfW = RASTER/2; // Sammelschiene (Mieter/LIS-Strang) ist exakt 1 Raster breit
 
     // Zählerspalten (Allgemeinstrom/Sonstiges/Wärmepumpe): 2 Raster hoch, 5 Raster breit,
     // 1 Raster Abstand. Der Heizungsabzweig (erste Wärmepumpe) sitzt exakt auf der
     // Symmetrielinie; alle Seiten-Spalten wechseln sich links/rechts davon ab (rank 1, 2, …),
     // sodass die Reihe symmetrisch um die Achse wächst.
-    // colW/enduseW (unten) müssen GERADE Vielfache von RASTER sein: diese Boxen werden über
-    // ihre Mitte positioniert (cx ± Breite/2) — die Mitte liegt auf einer Rasterlinie, bei
-    // ungerader Breite läge die halbe Breite dann auf einer HALBEN Rasterlinie und die Kante
-    // in der Zellmitte statt auf dem Raster (Vorgaben-Review: "Felder liegen nicht auf dem Raster").
-    var colW = 6*RASTER, colH = 2*RASTER, colGap = RASTER;
+    var colW = 5*RASTER, colH = 2*RASTER, colGap = RASTER;
     var colPitch = colW + colGap; // = 6 Raster, Abstand center-zu-center zweier benachbarter Spalten
     sideColumns.forEach(function(col, idx){
       col.side = (idx % 2 === 0) ? 'left' : 'right';
@@ -944,7 +911,7 @@
     var railX = symmetryX;
     var colTop = busBarBottom + 2*RASTER;
     var colBottom = colTop + colH;
-    var colEnduseTop = colBottom + 2*RASTER; // ganzzahlig, siehe gapChain-Kommentar oben
+    var colEnduseTop = colBottom + 1.5*RASTER;
     var colEnduseH = 3*RASTER;
     var rowPitch = 4*RASTER;
     var maxRows = Math.max(mieterUnits.length, lisUnits.length, 1);
@@ -953,7 +920,7 @@
 
     // Mieter-/LIS-Zähler: 4 Raster breit, 2 Raster hoch; Endverbraucher-Box 5 Raster breit,
     // 2 Raster hoch — je 1 Raster Abstand zur Schiene und zueinander.
-    var chipW = 4*RASTER, chipH = 2*RASTER, enduseW = 6*RASTER, enduseH = 2*RASTER;
+    var chipW = 4*RASTER, chipH = 2*RASTER, enduseW = 5*RASTER, enduseH = 2*RASTER;
     var mieterChipX = railX - stemHalfW - RASTER - chipW;
     var mieterEnduseX = mieterChipX - RASTER - enduseW;
     var lisChipX = railX + stemHalfW + RASTER;
@@ -1016,26 +983,21 @@
     ]));
     meterCenters.push({x:spineCenter, y:hauptY+hauptH/2}); // gleiche Zeile wie PlexLog, direkte Linie ohne Umweg
 
-    svg.appendChild(makeNode('pv','PV-Module','erzeuger', {x:pvCenter-mainHalfW,y:zaehlerY,width:mainW,height:2*RASTER}, [
+    svg.appendChild(makeNode('pv','PV-Module','ems', {x:pvCenter-mainHalfW,y:zaehlerY,width:mainW,height:2*RASTER}, [
       {y:zaehlerY+18, content:'PV-Module', size:'12.5'},
       {y:zaehlerY+32, content:'Gleichstrom (DC)', size:'9.5', weight:'400', fill:'#8B949E'}
     ]));
-    svg.appendChild(makeNode('wechselrichter','Wechselrichter','erzeuger', {x:pvCenter-mainHalfW,y:hauptY,width:mainW,height:hauptH}, [
+    svg.appendChild(makeNode('wechselrichter','Wechselrichter','ems', {x:pvCenter-mainHalfW,y:hauptY,width:mainW,height:hauptH}, [
       {y:hauptY+26, content:'Wechselrichter', size:'12.5'},
       {y:hauptY+42, content:'DC → AC', size:'10.5', weight:'400', fill:'#8B949E'}
     ]));
     if(showSpeicher){
-      svg.appendChild(makeNode('speicher','Batteriespeicher','erzeuger', {x:speicherCenter-speicherHalfW,y:hauptY,width:2*speicherHalfW,height:hauptH}, [
+      svg.appendChild(makeNode('speicher','Batteriespeicher','ems', {x:speicherCenter-speicherHalfW,y:hauptY,width:2*speicherHalfW,height:hauptH}, [
         {y:hauptY+26, content:'Speicher', size:'12.5'},
         {y:hauptY+42, content:'DC-gekoppelt', size:'10', weight:'400', fill:'#8B949E'}
       ]));
     }
 
-    // Steg der Hauptverteilung läuft durchgängig bis zur Mieter/LIS-Schiene (keine Lücke —
-    // eine unterbrochene Hauptverteilung wirkt falsch, siehe Vorgaben-Review). Der Wärmepumpen-
-    // Zähler + seine Verbrauchsbox liegen zwar auf demselben Steg, bekommen aber in makeNode()
-    // eine blickdichte Unterlage, damit der Steg nicht sichtbar durchscheint (statt einer
-    // echten Überdeckung zu vermeiden, indem der Steg unterbrochen wird).
     svg.appendChild(makeBusShape(x0, busBarTop, busWidth, busBarHeight, railX, stemHalfW, railBottom, busBarCenterY+5));
 
     function renderColumn(col){
