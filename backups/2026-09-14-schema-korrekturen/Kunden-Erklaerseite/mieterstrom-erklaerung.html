@@ -670,7 +670,7 @@
   function makeBusShape(hx0, hy0, hWidth, hHeight, stemCx, stemHalfW, stemBottom, textY){
     var hx1 = hx0 + hWidth, hy1 = hy0 + hHeight;
     var vx0 = stemCx - stemHalfW, vx1 = stemCx + stemHalfW;
-    var rTop = RASTER, rStem = 6; // Eck-Radius = 1 Rastermaß (Frontend-Vorgaben "Layout & Linien")
+    var rTop = 8, rStem = 6;
     var d = [
       'M', (hx0 + rTop), hy0,
       'L', (hx1 - rTop), hy0,
@@ -721,18 +721,13 @@
     var n = state.wohnungen;
     var isLarge = n > 4;
 
-    // Feste Spalten unter der waagrechten Sammelschiene. Die (erste) Wärmepumpe ist der
-    // "Heizleitungsabzweig" und sitzt fix auf der Symmetrielinie (siehe unten); Allgemeinstrom,
-    // Sonstiges und ggf. weitere Wärmepumpen wechseln sich links/rechts davon ab, sodass die
-    // ganze Spaltenreihe — und damit die Hauptverteilung — symmetrisch um die Achse wächst
-    // (Vorgaben-Review).
-    var centerColumns = repeatColumns(state.waermepumpe, 'Wärmepumpe', 'waermepumpe', 'waermepumpe-verbrauch', 'Wärmepumpen-Zähler');
-    var centerCol = centerColumns.length > 0 ? centerColumns[0] : null;
-    var sideColumns = [
+    // Feste Spalten unter der waagrechten Sammelschiene (Anzahl bleibt klein/übersichtlich).
+    // Reihenfolge: Allgemeinstrom, dann Sonstiges, dann Wärmepumpe(n) — wächst nach rechts.
+    var fixedColumns = [
       { key:'allgemeinstrom', enduseKey:'allgemeinstrom-verbrauch', enduseLabel:'Allgemeinstrom', ariaMeter:'Allgemeinstrom-Zähler', ariaEnduse:'Allgemeinstrom' }
     ];
-    sideColumns = sideColumns.concat(repeatColumns(state.sonstiges, 'Sonstiges', 'sonstiges', 'sonstiges-verbrauch', 'Sonstiges-Zähler'));
-    sideColumns = sideColumns.concat(centerColumns.slice(1)); // weitere Wärmepumpen (Ausnahmefall) reihen sich mit ein
+    fixedColumns = fixedColumns.concat(repeatColumns(state.sonstiges, 'Sonstiges', 'sonstiges', 'sonstiges-verbrauch', 'Sonstiges-Zähler'));
+    fixedColumns = fixedColumns.concat(repeatColumns(state.waermepumpe, 'Wärmepumpe', 'waermepumpe', 'waermepumpe-verbrauch', 'Wärmepumpen-Zähler'));
 
     // Mieter und Ladeinfrastruktur wachsen stattdessen an einer eigenen senkrechten
     // Sammelschiene nach unten: Mieter links, Ladeinfrastruktur rechts.
@@ -742,123 +737,82 @@
     }
     var lisUnits = repeatColumns(state.lis, 'Wallbox', 'lis', 'lis-verbrauch', 'Ladeinfrastruktur-Zähler');
 
-    // Alle GWL-Zähler bekommen dieselbe fortlaufende Nummerierung (Z01, Z02, …) —
-    // unabhängig von der Kategorie. Der Übergabezähler an der Eigentumsgrenze gehört dem
-    // Messstellenbetreiber, nicht GWL, und bekommt deshalb bewusst KEIN Z-Tag. Die
-    // GWL-eigene Nummerierung beginnt bei Z01 direkt mit dem Hauptzähler/Wandlerschrank,
-    // danach der Heizungsabzweig und die Seiten-Spalten (Allgemeinstrom, Sonstiges), dann
-    // die Mieter (Wohnung für Wohnung), dann die Ladeinfrastruktur.
+    // Alle Zähler bekommen dieselbe fortlaufende Nummerierung (Z01, Z02, …) — unabhängig von
+    // der Kategorie. Der Übergabezähler (Zähler des Messstellenbetreibers, an der
+    // Eigentumsgrenze) ist immer Z01, danach der Hauptzähler/Wandlerschrank als Z02.
+    // Erst danach die Spalten unter der Hauptverteilung (Allgemeinstrom, Sonstiges,
+    // Wärmepumpe), dann die Mieter (Wohnung für Wohnung), dann die Ladeinfrastruktur.
     var zCounter = 1;
     function nextZTag(){
       var tag = 'Z' + String(zCounter).padStart(2, '0');
       zCounter++;
       return tag;
     }
+    var msbTag = nextZTag();
     var mainTag = nextZTag();
-    // Sammelt die Mittelpunkte aller GWL-Zähler-Boxen — PlexLog wird am Ende per
-    // Strichpunktlinie (Steuer-/Datenleitung, kein Strompfad) mit jedem davon verbunden.
-    var meterCenters = [];
-    if(centerCol){ centerCol.tag = nextZTag(); }
-    sideColumns.forEach(function(col){ col.tag = nextZTag(); });
+    fixedColumns.forEach(function(col){ col.tag = nextZTag(); });
     mieterUnits.forEach(function(unit){
       unit.tag = nextZTag();
       unit.ariaMeter = 'Mieterzähler ' + unit.tag + ', Wohnung ' + unit.wohnungIndex;
     });
     lisUnits.forEach(function(unit){ unit.tag = nextZTag(); });
 
-    // ---------- Alle Maße als Vielfache von RASTER (5mm) — "Alle Felder liegen auf einem
-    // Raster" (Vorgaben-Review). Halbe Rastermaße (z. B. 1,5R) sind als feinere Unterteilung
-    // desselben Rasters zulässig und bereits an anderer Stelle in der Vorgabe etabliert. ----------
-    var mainW = 10*RASTER, mainH = 3*RASTER, mainHalfW = mainW/2; // Netz/HAK/Zähler(MSB)/Hauptzähler
-    var gapChain = 1.5*RASTER; // alle vier Lücken der Hauptkette, einheitlich
-
     // Hauptreihe (Netz/Zähler links, PV/Wechselrichter rechts) legt Lage und Breite der
-    // Hauptverteilung fest. Lücke zwischen Hauptzähler und Wechselrichter = 2 Raster (je 1
-    // Raster links/rechts von der Symmetrielinie, die fix in der Bildschirmmitte liegt,
-    // siehe centerDiagramOnViewport()).
+    // Hauptverteilung fest: sie beginnt links am Hauptzähler und endet rechts am Wechselrichter.
+    // Lücke zwischen Hauptzähler und Wechselrichter = 2 Raster (je 1 Raster links/rechts
+    // von der Symmetrielinie, die fix in der Bildschirmmitte liegt, siehe centerDiagramOnViewport()).
     var spineCenter = spineCenterAnchor;
-    var pvCenter = spineCenter + mainHalfW + 2*RASTER + mainHalfW;
-    var symmetryX = spineCenter + mainHalfW + RASTER; // Symmetrielinie: Mitte der 2-Raster-Lücke
+    var pvCenter = spineCenter + 100 + 2*RASTER + 95;
     var showSpeicher = state.speicher > 0;
-    var speicherHalfW = 4*RASTER; // Speicher 8 Raster breit
-    var speicherCenter = pvCenter + mainHalfW + 2*RASTER + speicherHalfW; // Lücke WR↔Speicher = 2 Raster
-    var pvRightEdge = showSpeicher ? (speicherCenter + speicherHalfW) : (pvCenter + mainHalfW);
+    var speicherCenter = pvCenter + 180; // Lücke WR↔Speicher enger als zuvor (näher an WR = "weiter links")
+    var pvRightEdge = showSpeicher ? (speicherCenter + 80) : (pvCenter + 95);
 
-    var netzY = RASTER, netzH = mainH;
+    // Hauptkette Netz→HAK→Zähler(MSB)→Hauptzähler: alle vier Kästchen sind gleich breit
+    // und hoch wie der Hauptzähler, zentriert auf der Spine-Achse. Der Pfeil HAK→Zähler
+    // ist 1,5 Raster lang, die anderen beiden Pfeile behalten ihren bisherigen Abstand (30).
+    var boxW = 200, boxH = 58; // Mass des Hauptzählers, gilt jetzt für alle vier Kästchen
+    var netzY = 16, netzH = boxH;
     var netzBottom = netzY + netzH;
-    var hakY = netzBottom + gapChain;
-    var hakH = mainH;
+    var hakY = netzBottom + 30; // Abstand Netz→HAK unverändert
+    var hakW = boxW, hakH = boxH;
     var hakBottom = hakY + hakH;
-    var zaehlerY = hakBottom + gapChain;
-    var zaehlerH = mainH;
+    var zaehlerY = hakBottom + 1.5*RASTER;
+    var zaehlerW = boxW, zaehlerH = boxH;
     var zaehlerBottom = zaehlerY + zaehlerH;
-    var hauptY = zaehlerBottom + gapChain;
-    var hauptH = mainH;
+    var hauptY = zaehlerBottom + 30; // Abstand Zähler→Hauptzähler unverändert
+    var hauptH = boxH;
     var hauptBottom = hauptY + hauptH;
 
     var busBarHeight = RASTER * 2; // zwei Raster-Kästchen hoch
-    var busBarCenterY = hauptBottom + gapChain + busBarHeight/2;
+    var busBarCenterY = hauptBottom + 30 + busBarHeight/2; // Abstand Hauptzähler→Hauptverteilung unverändert
     var busBarTop = busBarCenterY - busBarHeight/2;
     var busBarBottom = busBarCenterY + busBarHeight/2;
-    var stemHalfW = RASTER/2; // Sammelschiene (Mieter/LIS-Strang) ist exakt 1 Raster breit
-
-    // Zählerspalten (Allgemeinstrom/Sonstiges/Wärmepumpe): 2 Raster hoch, 5 Raster breit,
-    // 1 Raster Abstand. Der Heizungsabzweig (erste Wärmepumpe) sitzt exakt auf der
-    // Symmetrielinie; alle Seiten-Spalten wechseln sich links/rechts davon ab (rank 1, 2, …),
-    // sodass die Reihe symmetrisch um die Achse wächst.
-    var colW = 5*RASTER, colH = 2*RASTER, colGap = RASTER;
-    var colPitch = colW + colGap; // = 6 Raster, Abstand center-zu-center zweier benachbarter Spalten
-    sideColumns.forEach(function(col, idx){
-      col.side = (idx % 2 === 0) ? 'left' : 'right';
-      col.rank = Math.floor(idx/2) + 1;
-      col.cx = symmetryX + (col.side === 'left' ? -1 : 1) * colPitch * col.rank;
-    });
-    var leftCols = sideColumns.filter(function(c){ return c.side==='left'; });
-    var rightCols = sideColumns.filter(function(c){ return c.side==='right'; });
-    var columnsLeftEdge = leftCols.length > 0
-      ? (symmetryX - colPitch*leftCols.length - colW/2)
-      : (centerCol ? symmetryX - colW/2 : symmetryX);
-    var columnsRightEdge = rightCols.length > 0
-      ? (symmetryX + colPitch*rightCols.length + colW/2)
-      : (centerCol ? symmetryX + colW/2 : symmetryX);
-
-    var x0 = Math.min(spineCenter - mainHalfW, columnsLeftEdge); // linke Kante Hauptverteilung
-    var busRight = Math.max(pvRightEdge, columnsRightEdge); // rechte Kante Hauptverteilung
+    var x0 = spineCenter - 100; // linke Kante = linke Kante des Hauptzählers
+    var busRight = pvRightEdge; // rechte Kante = rechte Kante des Speichers/Wechselrichters
     var busWidth = busRight - x0;
 
-    // Mieter/Wallbox-Sammelschiene liegt exakt auf der Symmetrielinie — derselbe senkrechte
-    // Strang, der von der Hauptverteilung kommt, führt (unter dem Heizungsabzweig hindurch)
-    // bis zu den Mieter-/Wallbox-Abgängen weiter (Vorgaben-Review: "Symmetrielinie Mitte").
-    // Die Seiten-Spalten liegen mit ±3,5 Raster Abstand zur Achse, kollidieren also nie mit
-    // der 1 Raster breiten Schiene.
-    var railX = symmetryX;
-    var colTop = busBarBottom + 2*RASTER;
-    var colBottom = colTop + colH;
-    var colEnduseTop = colBottom + 1.5*RASTER;
-    var colEnduseH = 3*RASTER;
-    var rowPitch = 4*RASTER;
+    // Allgemein-/Heizungszähler: je 2 Raster hoch, 5 Raster breit. Allgemeinzähler linksbündig
+    // unter dem Hauptzähler, weitere Spalten (Wärmepumpe(n), Sonstiges) reihen sich mit festem
+    // Abstand nach rechts an — das Feld wächst frei statt sich einen festen Gesamt-Span zu teilen,
+    // damit ab 3 Spalten keine Überlappung mehr entsteht.
+    var colW = 5*RASTER, colH = 2*RASTER, colGap = RASTER;
+    var colLeftAnchor = spineCenter - 100;
+    // Mieter/Wallbox-Sammelschiene startet mittig zwischen Wechselrichter und Speicher
+    // (ohne Speicher bleibt sie mittig unter dem Wechselrichter).
+    var railX = showSpeicher ? (pvCenter + speicherCenter)/2 : pvCenter;
+    var colTop = busBarBottom + 43; // Abstand Hauptverteilung→Zählerspalten unverändert
+    var rowPitch = 66;
     var maxRows = Math.max(mieterUnits.length, lisUnits.length, 1);
-    var railTop = colEnduseTop + colEnduseH + RASTER; // erster Abgang (Reihe 1)
+    // Sammelschiene rückt jetzt unter den Wechselrichter, ihre Mieter-Abgänge reichen also weiter
+    // nach links – die Abgänge müssen unter der Wärmepumpen-/Allgemeinstrom-Spalte beginnen, nicht daneben.
+    var fixedColBottom = colTop + colH + 24 + 54;
+    var railTop = fixedColBottom + 20; // erster Abgang (Reihe 1)
     var railBottom = railTop + maxRows*rowPitch;
+    var rightExtent = lisUnits.length > 0 ? (railX + 196) : railX;
 
-    // Mieter-/LIS-Zähler: 4 Raster breit, 2 Raster hoch; Endverbraucher-Box 5 Raster breit,
-    // 2 Raster hoch — je 1 Raster Abstand zur Schiene und zueinander.
-    var chipW = 4*RASTER, chipH = 2*RASTER, enduseW = 5*RASTER, enduseH = 2*RASTER;
-    var mieterChipX = railX - stemHalfW - RASTER - chipW;
-    var mieterEnduseX = mieterChipX - RASTER - enduseW;
-    var lisChipX = railX + stemHalfW + RASTER;
-    var lisEnduseX = lisChipX + chipW + RASTER;
-
-    // PlexLog sitzt exakt 2 Raster links vom Hauptzähler (Vorgaben-Review), gleiche Zeile/Höhe.
-    var plexW = 5*RASTER, plexH = mainH;
-    var plexRight = spineCenter - mainHalfW - 2*RASTER;
-    var plexLeft = plexRight - plexW;
-
-    var leftMost = Math.min(0, x0, plexLeft, mieterUnits.length>0 ? mieterEnduseX : plexLeft);
-    var rightMost = Math.max(busRight, pvRightEdge, lisUnits.length>0 ? (lisEnduseX+enduseW) : railX);
-    var viewW = Math.round(rightMost - leftMost + 60);
+    var viewW = Math.round(Math.max(busRight + 60, pvRightEdge + 60, rightExtent + 60));
     var viewH = Math.round(Math.max(638, railBottom + 60));
-    svg.setAttribute('viewBox', Math.round(leftMost-30) + ' 0 ' + viewW + ' ' + viewH);
+    svg.setAttribute('viewBox', '0 0 ' + viewW + ' ' + viewH);
     svg.setAttribute('width', viewW);
     svg.setAttribute('height', viewH);
 
@@ -875,120 +829,100 @@
     svg.appendChild(connLine(spineCenter,netzBottom,spineCenter,hakY,{'stroke-width':'2','marker-start':'url(#arrC)'}));
     svg.appendChild(connLine(spineCenter,hakBottom,spineCenter,zaehlerY,{'stroke-width':'2','marker-start':'url(#arrC)'}));
     svg.appendChild(connLine(spineCenter,zaehlerBottom,spineCenter,hauptY,{'stroke-width':'2','marker-start':'url(#arrC)'}));
-    svg.appendChild(connLine(spineCenter,hauptBottom,spineCenter,busBarTop,{'stroke-width':'2','marker-start':'url(#arrC)'}));
+    svg.appendChild(connLine(spineCenter,hauptBottom,spineCenter,busBarTop,{'stroke-width':'2'}));
     svg.appendChild(connLine(pvCenter,zaehlerBottom,pvCenter,hauptY,{'stroke-width':'2'}));
-    svg.appendChild(connLine(pvCenter,hauptBottom,pvCenter,busBarTop,{'stroke-width':'2','marker-start':'url(#arrC)'}));
+    svg.appendChild(connLine(pvCenter,hauptBottom,pvCenter,busBarTop,{'stroke-width':'2'}));
     if(showSpeicher){
       var speicherLineY = hauptY + hauptH/2;
-      svg.appendChild(connLine(pvCenter+mainHalfW,speicherLineY, speicherCenter-speicherHalfW,speicherLineY, {'stroke-width':'1.6', 'marker-start':'url(#arrC)', 'marker-end':'url(#arrC)'}));
-      svg.appendChild(svgText((pvCenter+mainHalfW+speicherCenter-speicherHalfW)/2, speicherLineY-8, 'DC', {'font-size':'9.5', fill:'#8B949E'}));
+      svg.appendChild(connLine(pvCenter+95,speicherLineY, speicherCenter-80,speicherLineY, {'stroke-width':'1.6', 'marker-start':'url(#arrC)', 'marker-end':'url(#arrC)'}));
+      svg.appendChild(svgText((pvCenter+95+speicherCenter-80)/2, speicherLineY-8, 'DC', {'font-size':'9.5', fill:'#8B949E'}));
     }
-    svg.appendChild(svgText(spineCenter+mainHalfW, 85, 'Bezug / Einspeisung', {'font-size':'10.5', fill:'#8B949E', 'text-anchor':'start'}));
+    svg.appendChild(svgText(spineCenter+100, 85, 'Bezug / Einspeisung', {'font-size':'10.5', fill:'#8B949E', 'text-anchor':'start'}));
 
-    svg.appendChild(makeNode('netz','Öffentliches Stromnetz','grid', {x:spineCenter-mainHalfW,y:netzY,width:mainW,height:netzH}, [
-      {y:netzY+netzH/2, content:'Öffentliches Netz'}
+    svg.appendChild(makeNode('netz','Öffentliches Stromnetz','grid', {x:spineCenter-100,y:netzY,width:200,height:netzH}, [
+      {y:45, content:'Öffentliches Netz'}
     ]));
-    svg.appendChild(makeNode('hak','Hausanschlusskasten','grid', {x:spineCenter-mainHalfW,y:hakY,width:mainW,height:hakH}, [
+    svg.appendChild(makeNode('hak','Hausanschlusskasten','grid', {x:spineCenter-hakW/2,y:hakY,width:hakW,height:hakH}, [
       {y:hakY+hakH/2, content:'Hausanschluss'},
       {y:hakY+hakH/2+15, content:'(HAK)', size:'10.5', weight:'400', fill:'#8B949E'}
     ]));
 
-    svg.appendChild(makeNode('msb-zaehler','Zähler Messstellenbetreiber','grid', {x:spineCenter-mainHalfW,y:zaehlerY,width:mainW,height:zaehlerH}, [
-      {y:zaehlerY+22, content:'Zähler', size:'12.5'},
-      {y:zaehlerY+38, content:'Messstellenbetreiber', size:'9.5', weight:'400', fill:'#8B949E'}
+    svg.appendChild(makeNode('msb-zaehler','Übergabezähler '+msbTag+', Zähler Messstellenbetreiber','grid', {x:spineCenter-zaehlerW/2,y:zaehlerY,width:zaehlerW,height:zaehlerH}, [
+      {y:zaehlerY+15, content:'Zähler', size:'12.5'},
+      {y:zaehlerY+28, content:'Messstellenbetreiber', size:'9.5', weight:'400', fill:'#8B949E'},
+      {y:zaehlerY+43, content: msbTag, size:'10.5', weight:'400', fill:'#8B949E', mono:true}
     ]));
 
     var mainKey = isLarge ? 'wandlerschrank' : 'hauptzaehler';
     var mainAria = (isLarge ? 'Zentraler Wandlerschrank' : 'Hauptzähler') + ' ' + mainTag;
-    svg.appendChild(makeNode(mainKey, mainAria, 'mid', {x:spineCenter-mainHalfW,y:hauptY,width:mainW,height:hauptH}, [
+    svg.appendChild(makeNode(mainKey, mainAria, 'mid', {x:spineCenter-100,y:hauptY,width:200,height:hauptH}, [
       {y:hauptY+26, content: isLarge ? 'Wandlerschrank' : 'Hauptzähler', size:'12.5'},
       {y:hauptY+42, content: mainTag, size:'10.5', weight:'400', fill:'#8B949E', mono:true}
     ]));
-    meterCenters.push({x:spineCenter, y:hauptY+hauptH/2});
 
-    svg.appendChild(makeNode('pv','PV-Module','ems', {x:pvCenter-mainHalfW,y:zaehlerY,width:mainW,height:2*RASTER}, [
-      {y:zaehlerY+18, content:'PV-Module', size:'12.5'},
-      {y:zaehlerY+32, content:'Gleichstrom (DC)', size:'9.5', weight:'400', fill:'#8B949E'}
+    svg.appendChild(makeNode('pv','PV-Module','ems', {x:pvCenter-95,y:zaehlerY,width:190,height:48}, [
+      {y:zaehlerY+24, content:'PV-Module', size:'12.5'},
+      {y:zaehlerY+39, content:'Gleichstrom (DC)', size:'9.5', weight:'400', fill:'#8B949E'}
     ]));
-    svg.appendChild(makeNode('wechselrichter','Wechselrichter','ems', {x:pvCenter-mainHalfW,y:hauptY,width:mainW,height:hauptH}, [
+    svg.appendChild(makeNode('wechselrichter','Wechselrichter','ems', {x:pvCenter-95,y:hauptY,width:190,height:hauptH}, [
       {y:hauptY+26, content:'Wechselrichter', size:'12.5'},
       {y:hauptY+42, content:'DC → AC', size:'10.5', weight:'400', fill:'#8B949E'}
     ]));
     if(showSpeicher){
-      svg.appendChild(makeNode('speicher','Batteriespeicher','ems', {x:speicherCenter-speicherHalfW,y:hauptY,width:2*speicherHalfW,height:hauptH}, [
+      svg.appendChild(makeNode('speicher','Batteriespeicher','ems', {x:speicherCenter-80,y:hauptY,width:160,height:hauptH}, [
         {y:hauptY+26, content:'Speicher', size:'12.5'},
         {y:hauptY+42, content:'DC-gekoppelt', size:'10', weight:'400', fill:'#8B949E'}
       ]));
     }
 
-    svg.appendChild(makeBusShape(x0, busBarTop, busWidth, busBarHeight, railX, stemHalfW, railBottom, busBarCenterY+5));
+    svg.appendChild(makeBusShape(x0, busBarTop, busWidth, busBarHeight, railX, 8, railBottom, busBarCenterY+5));
 
-    function renderColumn(col){
-      var cx = col.cx;
+    fixedColumns.forEach(function(col, idx){
+      var cx = colLeftAnchor + colW/2 + idx * (colW + colGap);
+      var colBottom = colTop + colH;
+      var enduseTop = colBottom + 24;
       svg.appendChild(connLine(cx,busBarBottom,cx,colTop));
-      svg.appendChild(connLine(cx,colBottom,cx,colEnduseTop));
+      svg.appendChild(connLine(cx,colBottom,cx,enduseTop));
       svg.appendChild(makeNode(col.key, col.ariaMeter, 'mid', {x:cx-colW/2,y:colTop,width:colW,height:colH}, [
         {y:colTop+colH/2, content:col.tag, size:'12.5', mono:true}
       ]));
-      meterCenters.push({x:cx, y:colTop+colH/2});
       var labelLines = splitLabel(col.enduseLabel);
       var textDefs = labelLines.length === 1
-        ? [{y:colEnduseTop+31, content:labelLines[0], size:'11'}]
-        : [{y:colEnduseTop+24, content:labelLines[0], size:'11'}, {y:colEnduseTop+38, content:labelLines[1], size:'11'}];
-      svg.appendChild(makeNode(col.enduseKey, col.ariaEnduse, 'neutral', {x:cx-enduseW/2,y:colEnduseTop,width:enduseW,height:colEnduseH}, textDefs));
-    }
-    if(centerCol){ centerCol.cx = symmetryX; renderColumn(centerCol); }
-    sideColumns.forEach(renderColumn);
+        ? [{y:enduseTop+31, content:labelLines[0], size:'11'}]
+        : [{y:enduseTop+24, content:labelLines[0], size:'11'}, {y:enduseTop+38, content:labelLines[1], size:'11'}];
+      svg.appendChild(makeNode(col.enduseKey, col.ariaEnduse, 'neutral', {x:cx-45,y:enduseTop,width:90,height:54}, textDefs));
+    });
 
     mieterUnits.forEach(function(unit, idx){
       var rowY = railTop + (idx+0.5)*rowPitch;
-      // Startet an der Schienenkante (nicht -mitte) — sonst wirkt der Pfeil wie eine
-      // durchgehende Linie quer durch die Sammelschiene (Vorgaben-Review).
-      svg.appendChild(connLine(railX-stemHalfW,rowY, mieterChipX+chipW,rowY));
-      svg.appendChild(connLine(mieterChipX,rowY, mieterEnduseX+enduseW,rowY));
-      svg.appendChild(makeNode(unit.key, unit.ariaMeter, 'mid', {x:mieterChipX,y:rowY-chipH/2,width:chipW,height:chipH}, [
+      var chipX = railX-94, enduseX = railX-196;
+      svg.appendChild(connLine(railX,rowY, chipX+70,rowY));
+      svg.appendChild(connLine(chipX,rowY, enduseX+86,rowY));
+      svg.appendChild(makeNode(unit.key, unit.ariaMeter, 'mid', {x:chipX,y:rowY-17,width:70,height:34}, [
         {y:rowY+4, content:unit.tag, size:'11', mono:true}
       ]));
-      meterCenters.push({x:mieterChipX+chipW/2, y:rowY});
-      svg.appendChild(makeNode(unit.enduseKey, unit.ariaEnduse, 'neutral', {x:mieterEnduseX,y:rowY-enduseH/2,width:enduseW,height:enduseH}, [
+      svg.appendChild(makeNode(unit.enduseKey, unit.ariaEnduse, 'neutral', {x:enduseX,y:rowY-23,width:86,height:46}, [
         {y:rowY+3, content:unit.enduseLabel, size:'10'}
       ]));
     });
 
     lisUnits.forEach(function(unit, idx){
       var rowY = railTop + (idx+0.5)*rowPitch;
-      svg.appendChild(connLine(railX+stemHalfW,rowY, lisChipX,rowY));
-      svg.appendChild(connLine(lisChipX+chipW,rowY, lisEnduseX,rowY));
-      svg.appendChild(makeNode(unit.key, unit.ariaMeter, 'mid', {x:lisChipX,y:rowY-chipH/2,width:chipW,height:chipH}, [
+      var chipX = railX+24, enduseX = railX+110;
+      svg.appendChild(connLine(railX,rowY, chipX,rowY));
+      svg.appendChild(connLine(chipX+70,rowY, enduseX,rowY));
+      svg.appendChild(makeNode(unit.key, unit.ariaMeter, 'mid', {x:chipX,y:rowY-17,width:70,height:34}, [
         {y:rowY+4, content:unit.tag, size:'11', mono:true}
       ]));
-      meterCenters.push({x:lisChipX+chipW/2, y:rowY});
-      svg.appendChild(makeNode(unit.enduseKey, unit.ariaEnduse, 'neutral', {x:lisEnduseX,y:rowY-enduseH/2,width:enduseW,height:enduseH}, [
+      svg.appendChild(makeNode(unit.enduseKey, unit.ariaEnduse, 'neutral', {x:enduseX,y:rowY-23,width:86,height:46}, [
         {y:rowY+3, content:unit.enduseLabel, size:'10'}
       ]));
     });
 
-    svg.appendChild(makeNode('plexlog','PlexLog Energiemanager','ems', {x:plexLeft,y:hauptY,width:plexW,height:plexH}, [
+    svg.appendChild(makeNode('plexlog','PlexLog Energiemanager','ems', {x:20,y:hauptY,width:100,height:hauptH}, [
       {y:hauptY+26, content:'PlexLog', size:'12.5', weight:'700'},
       {y:hauptY+42, content:'Energiemanager', size:'9', weight:'400', fill:'#8B949E'}
     ]));
-
-    // PlexLog als EMS/HEMS: Strichpunktlinie (Steuer-/Datenverbindung, kein Strompfad) zu
-    // jedem GWL-Zähler — unter allen anderen Elementen eingefügt, damit die Boxen optisch
-    // darüberliegen und die Linien nur als dezente Signal-Ebene wirken (Vorgaben-Review).
-    // Rechtwinklig geführt (erst waagerecht auf die Ziel-Spalte, dann senkrecht zum Zähler) —
-    // keine Diagonalen, wie bei allen anderen Linien im Schema (Vorgaben-Review).
-    var plexAnchor = {x:plexRight, y:hauptY+hauptH/2};
-    var plexLines = svgNode('g', {'aria-hidden':'true'});
-    meterCenters.forEach(function(pt){
-      var d = 'M '+plexAnchor.x+' '+plexAnchor.y+' L '+pt.x+' '+plexAnchor.y+' L '+pt.x+' '+pt.y;
-      plexLines.appendChild(svgNode('path', {
-        d:d, fill:'none',
-        stroke:'#E3A008', 'stroke-width':'1', 'stroke-dasharray':'6 3 1.5 3',
-        opacity:'0.35', 'pointer-events':'none'
-      }));
-    });
-    svg.insertBefore(plexLines, svg.firstChild.nextSibling);
 
     svg.querySelectorAll('.node').forEach(function(node){
       node.addEventListener('click', function(){ showDetail(node.getAttribute('data-key'), node); });
@@ -1000,7 +934,7 @@
       });
     });
 
-    var totalMeters = zCounter - 1; // alle vergebenen GWL-Z-Nummern, inkl. Hauptmessung, ohne den externen MSB-Zähler
+    var totalMeters = zCounter - 1; // alle vergebenen Z-Nummern, inkl. Übergabezähler Z01 & Hauptmessung
     statTotal.textContent = totalMeters;
     statMid.textContent = totalMeters;
     statHaupt.textContent = isLarge ? 'Wandlerschrank' : 'Hauptzähler';
