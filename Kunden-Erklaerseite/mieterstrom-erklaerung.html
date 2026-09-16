@@ -206,12 +206,22 @@
   .config-stats{margin-top:20px;}
   .config-note{margin-top:10px;}
 
-  .diagram-layout{display:grid;grid-template-columns:1fr 320px;gap:28px;margin-top:28px;align-items:start;}
-  .diagram-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:var(--grid);background:var(--surface);padding:20px 12px;}
+  .diagram-layout{
+    /* Wächst symmetrisch über die normale Seitenbreite hinaus, damit das Schema nie
+       beschnitten wird oder scrollen muss — bleibt dabei auf der Symmetrieachse
+       (Viewport-Mitte) zentriert, unabhängig von .page max-width. */
+    position:relative;left:50%;transform:translateX(-50%);
+    width:max-content;max-width:calc(100vw - 48px);
+    margin-top:28px;
+    border:1px solid var(--border);border-radius:var(--grid);background:var(--surface);
+  }
+  .diagram-main{padding:24px;}
+  .diagram-title{font-size:17.6px;margin:0 0 16px;}
+  .diagram-scroll{overflow-x:auto;}
   .scroll-hint{display:none;font-size:12.48px;color:var(--textSecondary);margin:0 0 10px;font-style:italic;}
   @media (max-width:760px){ .scroll-hint{display:block;} }
   figure{margin:0;}
-  figcaption{margin-top:14px;padding:0 8px;font-size:13.76px;color:var(--textSecondary);}
+  figcaption{margin-top:14px;font-size:13.76px;color:var(--textSecondary);}
   svg.schema{display:block;margin:0 auto;}
 
   .node .box{cursor:pointer;transition:stroke .15s,stroke-width .15s;}
@@ -220,8 +230,9 @@
   .node text{pointer-events:none;user-select:none;}
 
   aside.detail-panel{
-    position:sticky;top:20px;background:var(--surface);border:1px solid var(--border);
-    border-radius:var(--grid);padding:24px;min-height:280px;
+    position:absolute;top:24px;right:24px;width:280px;max-width:calc(100% - 48px);
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--grid);
+    padding:20px;box-shadow:0 8px 24px rgba(0,0,0,.4);
   }
   aside.detail-panel h3{font-size:17.6px;}
   aside.detail-panel .badges{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
@@ -257,8 +268,7 @@
   footer .brand{font-family:var(--mono);color:var(--textPrimary);font-weight:600;margin-bottom:8px;display:block;}
 
   @media (max-width:860px){
-    .diagram-layout{grid-template-columns:1fr;}
-    aside.detail-panel{position:static;}
+    aside.detail-panel{position:static;width:auto;max-width:none;margin:16px 24px 24px;box-shadow:none;}
     .value-grid{grid-template-columns:1fr;}
     .steps{grid-template-columns:1fr 1fr;}
     .compare{grid-template-columns:1fr;}
@@ -290,6 +300,13 @@
     display:flex;align-items:center;gap:8px;
   }
   .toggle-bar label{cursor:pointer;user-select:none;}
+  .toggle-bar .toggle-sep{width:1px;height:16px;background:var(--border);}
+  .toggle-bar button{
+    appearance:none;border:1px solid var(--gold);background:transparent;color:var(--gold);
+    border-radius:100px;padding:4px 10px;font-size:12px;font-weight:700;
+    letter-spacing:.04em;text-transform:uppercase;cursor:pointer;font-family:inherit;
+  }
+  .toggle-bar button:hover{background:rgba(227,160,8,.12);}
 
   /* ---------- COOKIE-BANNER (Pflicht-Vorgabe, siehe Frontend-Vorgaben.md) ----------
      Einfacher Ein-Button-Hinweis, da diese Seite keine optionalen Cookies setzt. */
@@ -317,11 +334,27 @@
 <!-- DEV-ONLY: Ausrichtungs-Raster (5mm) + Symmetrieachse nach Frontend-Vorgaben Punkt 9,
      1:1 aus Vorgaben-Kontrollseite.html. Vor dem Live-Gang diesen Block + den zugehörigen
      CSS-Abschnitt oben entfernen. -->
-<div class="toggle-bar">
+<div class="toggle-bar" id="devToolbar">
   <input type="checkbox" id="gridToggle" checked onchange="document.body.classList.toggle('dev-grid', this.checked)">
   <label for="gridToggle">Dev-Grid (5mm-Raster + Symmetrieachse)</label>
+  <span class="toggle-sep"></span>
+  <button type="button" id="freigabeBtn" onclick="gwlFreigeben()">Seite freigeben</button>
 </div>
-<script>document.body.classList.add('dev-grid');</script>
+<script>
+  var GWL_FREIGABE_KEY = 'gwl-freigegeben-' + location.pathname;
+  if (localStorage.getItem(GWL_FREIGABE_KEY) === 'true') {
+    document.getElementById('devToolbar').remove();
+  } else {
+    document.body.classList.add('dev-grid');
+  }
+  function gwlFreigeben() {
+    var ok = confirm('Seite als final freigegeben markieren?\n\nDas Dev-Grid-Overlay wird danach dauerhaft ausgeblendet (bis es im Code/DevTools zurückgesetzt wird).');
+    if (!ok) return;
+    localStorage.setItem(GWL_FREIGABE_KEY, 'true');
+    document.body.classList.remove('dev-grid');
+    document.getElementById('devToolbar').remove();
+  }
+</script>
 
 <div class="gwl-header-outer">
   <header class="gwl-header">
@@ -487,7 +520,8 @@
       <p class="stat-source config-note">Vereinfachte Darstellung: Ob ein Wandlerschrank nötig ist, hängt in der Praxis von der Anschlussleistung ab (&gt; 50&nbsp;A / 30&nbsp;kVA) — die Wohnungszahl dient hier nur als anschauliche Faustregel.</p>
 
       <div class="diagram-layout">
-        <div>
+        <div class="diagram-main">
+          <h3 class="diagram-title">Schemazeichnung</h3>
           <figure>
             <p class="scroll-hint">← Schema ist breiter als der Bildschirm — zum Scrollen wischen →</p>
             <div class="diagram-scroll">
@@ -756,8 +790,11 @@
     return g;
   }
   // Hauptverteilung als EIN zusammenhängendes Feld: waagrechter Balken + senkrechte
-  // Sammelschiene als ein einziger Pfad (T-Form), statt zwei separater Rechtecke mit
-  // sichtbarer Nahtstelle. Nur die vier Außenecken sind gerundet, am Übergang bleibt es eckig.
+  // Sammelschiene als ein einziger durchgängiger Pfad (T-Form), statt zwei separater
+  // Rechtecke mit sichtbarer Nahtstelle. Alle vier Außenecken sind gerundet, am Übergang
+  // zum Steg bleibt es eckig (Vorgaben-Review). Überdeckungen von Zähler-/Verbrauchsfeldern
+  // werden NICHT durch Unterbrechen des Stegs vermieden, sondern dadurch, dass keine Spalte
+  // auf der Steg-Achse platziert wird (siehe sideColumns weiter unten).
   function makeBusShape(hx0, hy0, hWidth, hHeight, stemCx, stemHalfW, stemBottom, textY){
     var hx1 = hx0 + hWidth, hy1 = hy0 + hHeight;
     var vx0 = stemCx - stemHalfW, vx1 = stemCx + stemHalfW;
@@ -766,14 +803,16 @@
       'M', (hx0 + rTop), hy0,
       'L', (hx1 - rTop), hy0,
       'A', rTop, rTop, 0, 0, 1, hx1, (hy0 + rTop),
-      'L', hx1, hy1,
+      'L', hx1, (hy1 - rTop),
+      'A', rTop, rTop, 0, 0, 1, (hx1 - rTop), hy1,
       'L', vx1, hy1,
       'L', vx1, (stemBottom - rStem),
       'A', rStem, rStem, 0, 0, 1, (vx1 - rStem), stemBottom,
       'L', (vx0 + rStem), stemBottom,
       'A', rStem, rStem, 0, 0, 1, vx0, (stemBottom - rStem),
       'L', vx0, hy1,
-      'L', hx0, hy1,
+      'L', (hx0 + rTop), hy1,
+      'A', rTop, rTop, 0, 0, 1, hx0, (hy1 - rTop),
       'L', hx0, (hy0 + rTop),
       'A', rTop, rTop, 0, 0, 1, (hx0 + rTop), hy0,
       'Z'
@@ -812,18 +851,15 @@
     var n = state.wohnungen;
     var isLarge = n > 4;
 
-    // Feste Spalten unter der waagrechten Sammelschiene. Die (erste) Wärmepumpe ist der
-    // "Heizleitungsabzweig" und sitzt fix auf der Symmetrielinie (siehe unten); Allgemeinstrom,
-    // Sonstiges und ggf. weitere Wärmepumpen wechseln sich links/rechts davon ab, sodass die
-    // ganze Spaltenreihe — und damit die Hauptverteilung — symmetrisch um die Achse wächst
-    // (Vorgaben-Review).
-    var centerColumns = repeatColumns(state.waermepumpe, 'Wärmepumpe', 'waermepumpe', 'waermepumpe-verbrauch', 'Wärmepumpen-Zähler');
-    var centerCol = centerColumns.length > 0 ? centerColumns[0] : null;
-    var sideColumns = [
-      { key:'allgemeinstrom', enduseKey:'allgemeinstrom-verbrauch', enduseLabel:'Allgemeinstrom', ariaMeter:'Allgemeinstrom-Zähler', ariaEnduse:'Allgemeinstrom' }
-    ];
+    // Feste Spalten unter der waagrechten Sammelschiene. KEINE Spalte sitzt auf der
+    // Symmetrielinie (dort verläuft der durchgehende Steg zur Mieter-/LIS-Schiene, siehe
+    // makeBusShape) — Wärmepumpe(n), Allgemeinstrom und Sonstiges wechseln sich alle
+    // gleichberechtigt links/rechts davon ab, sodass die ganze Spaltenreihe symmetrisch um
+    // die Achse wächst, ohne ein Feld zu überdecken (Vorgaben-Review: "keine Überdeckungen
+    // der Felder").
+    var sideColumns = repeatColumns(state.waermepumpe, 'Wärmepumpe', 'waermepumpe', 'waermepumpe-verbrauch', 'Wärmepumpen-Zähler');
+    sideColumns.push({ key:'allgemeinstrom', enduseKey:'allgemeinstrom-verbrauch', enduseLabel:'Allgemeinstrom', ariaMeter:'Allgemeinstrom-Zähler', ariaEnduse:'Allgemeinstrom' });
     sideColumns = sideColumns.concat(repeatColumns(state.sonstiges, 'Sonstiges', 'sonstiges', 'sonstiges-verbrauch', 'Sonstiges-Zähler'));
-    sideColumns = sideColumns.concat(centerColumns.slice(1)); // weitere Wärmepumpen (Ausnahmefall) reihen sich mit ein
 
     // Mieter und Ladeinfrastruktur wachsen stattdessen an einer eigenen senkrechten
     // Sammelschiene nach unten: Mieter links, Ladeinfrastruktur rechts.
@@ -849,7 +885,6 @@
     // Sammelt die Mittelpunkte aller GWL-Zähler-Boxen — PlexLog wird am Ende per
     // Strichpunktlinie (Steuer-/Datenleitung, kein Strompfad) mit jedem davon verbunden.
     var meterCenters = [];
-    if(centerCol){ centerCol.tag = nextZTag(); }
     sideColumns.forEach(function(col){ col.tag = nextZTag(); });
     mieterUnits.forEach(function(unit){
       unit.tag = nextZTag();
@@ -901,10 +936,10 @@
     // auf der nächsten Rasterlinie (Vorgaben-Review: "Felder liegen nicht auf dem Raster").
     var stemHalfW = RASTER;
 
-    // Zählerspalten (Allgemeinstrom/Sonstiges/Wärmepumpe): 2 Raster hoch, 5 Raster breit,
-    // 1 Raster Abstand. Der Heizungsabzweig (erste Wärmepumpe) sitzt exakt auf der
-    // Symmetrielinie; alle Seiten-Spalten wechseln sich links/rechts davon ab (rank 1, 2, …),
-    // sodass die Reihe symmetrisch um die Achse wächst.
+    // Zählerspalten (Wärmepumpe/Allgemeinstrom/Sonstiges): 2 Raster hoch, 5 Raster breit,
+    // 1 Raster Abstand. Alle Spalten wechseln sich gleichberechtigt links/rechts der
+    // Symmetrielinie ab (rank 1, 2, …) — keine sitzt auf der Achse selbst, sodass die Reihe
+    // symmetrisch wächst, ohne den durchgehenden Steg der Hauptverteilung zu überdecken.
     // colW/enduseW (unten) müssen GERADE Vielfache von RASTER sein: diese Boxen werden über
     // ihre Mitte positioniert (cx ± Breite/2) — die Mitte liegt auf einer Rasterlinie, bei
     // ungerader Breite läge die halbe Breite dann auf einer HALBEN Rasterlinie und die Kante
@@ -920,10 +955,10 @@
     var rightCols = sideColumns.filter(function(c){ return c.side==='right'; });
     var columnsLeftEdge = leftCols.length > 0
       ? (symmetryX - colPitch*leftCols.length - colW/2)
-      : (centerCol ? symmetryX - colW/2 : symmetryX);
+      : symmetryX;
     var columnsRightEdge = rightCols.length > 0
       ? (symmetryX + colPitch*rightCols.length + colW/2)
-      : (centerCol ? symmetryX + colW/2 : symmetryX);
+      : symmetryX;
 
     // Hauptverteilung ist immer spiegelsymmetrisch um die Symmetrielinie — beide Seiten
     // bekommen den größeren der beiden benötigten Abstände, nicht je Seite ihren eigenen
@@ -937,10 +972,10 @@
     var busWidth = busRight - x0;
 
     // Mieter/Wallbox-Sammelschiene liegt exakt auf der Symmetrielinie — derselbe senkrechte
-    // Strang, der von der Hauptverteilung kommt, führt (unter dem Heizungsabzweig hindurch)
-    // bis zu den Mieter-/Wallbox-Abgängen weiter (Vorgaben-Review: "Symmetrielinie Mitte").
-    // Die Seiten-Spalten liegen mit ±3,5 Raster Abstand zur Achse, kollidieren also nie mit
-    // der 1 Raster breiten Schiene.
+    // Steg, der von der Hauptverteilung kommt, führt ungehindert bis zu den Mieter-/
+    // Wallbox-Abgängen weiter (Vorgaben-Review: "Symmetrielinie Mitte"). Die Seiten-Spalten
+    // liegen mit mind. ±3 Raster Abstand zur Achse, kollidieren also nie mit der 1 Raster
+    // breiten Schiene.
     var railX = symmetryX;
     var colTop = busBarBottom + 2*RASTER;
     var colBottom = colTop + colH;
@@ -993,7 +1028,6 @@
       svg.appendChild(connLine(pvCenter+mainHalfW,speicherLineY, speicherCenter-speicherHalfW,speicherLineY, {'stroke-width':'1.6', 'marker-start':'url(#arrC)', 'marker-end':'url(#arrC)'}));
       svg.appendChild(svgText((pvCenter+mainHalfW+speicherCenter-speicherHalfW)/2, speicherLineY-8, 'DC', {'font-size':'9.5', fill:'#8B949E'}));
     }
-    svg.appendChild(svgText(spineCenter+mainHalfW, 85, 'Bezug / Einspeisung', {'font-size':'10.5', fill:'#8B949E', 'text-anchor':'start'}));
 
     svg.appendChild(makeNode('netz','Öffentliches Stromnetz','grid', {x:spineCenter-mainHalfW,y:netzY,width:mainW,height:netzH}, [
       {y:netzY+netzH/2, content:'Öffentliches Netz'}
@@ -1031,11 +1065,9 @@
       ]));
     }
 
-    // Steg der Hauptverteilung läuft durchgängig bis zur Mieter/LIS-Schiene (keine Lücke —
-    // eine unterbrochene Hauptverteilung wirkt falsch, siehe Vorgaben-Review). Der Wärmepumpen-
-    // Zähler + seine Verbrauchsbox liegen zwar auf demselben Steg, bekommen aber in makeNode()
-    // eine blickdichte Unterlage, damit der Steg nicht sichtbar durchscheint (statt einer
-    // echten Überdeckung zu vermeiden, indem der Steg unterbrochen wird).
+    // Steg der Hauptverteilung reicht durchgängig bis zur Mieter/LIS-Schiene (keine
+    // Unterbrechung). Da keine Zählerspalte auf der Steg-Achse liegt (siehe sideColumns
+    // oben), überdeckt er dabei auch kein Feld.
     svg.appendChild(makeBusShape(x0, busBarTop, busWidth, busBarHeight, railX, stemHalfW, railBottom, busBarCenterY+5));
 
     function renderColumn(col){
@@ -1054,7 +1086,6 @@
         : [{y:colEnduseTop+24, content:labelLines[0], size:'11'}, {y:colEnduseTop+38, content:labelLines[1], size:'11'}];
       svg.appendChild(makeNode(col.enduseKey, col.ariaEnduse, 'neutral', {x:cx-enduseW/2,y:colEnduseTop,width:enduseW,height:colEnduseH}, textDefs));
     }
-    if(centerCol){ centerCol.cx = symmetryX; renderColumn(centerCol); }
     sideColumns.forEach(renderColumn);
 
     mieterUnits.forEach(function(unit, idx){
