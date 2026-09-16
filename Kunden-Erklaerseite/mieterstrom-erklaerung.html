@@ -217,6 +217,12 @@
   }
   .diagram-main{padding:24px;}
   .diagram-title{font-size:17.6px;margin:0 0 16px;}
+  .flow-toggle{display:flex;gap:8px;margin:-8px 0 16px;}
+  /* Energiefluss: aktiver Pfad fließt als bewegte gestrichelte Linie (reines CSS,
+     keine externe Animations-Lib nötig), Farbe wird je Quelle per JS gesetzt. */
+  .flow-line{transition:opacity .2s;}
+  .flow-line.flow-active{stroke-dasharray:8 6;animation:flowDash .5s linear infinite;}
+  @keyframes flowDash{ to{ stroke-dashoffset:-14; } }
   .diagram-scroll{overflow-x:auto;}
   .scroll-hint{display:none;font-size:12.48px;color:var(--textSecondary);margin:0 0 10px;font-style:italic;}
   @media (max-width:760px){ .scroll-hint{display:block;} }
@@ -266,6 +272,7 @@
   footer{padding:48px 0 64px;}
   footer p{color:var(--textSecondary);font-size:13.76px;max-width:60ch;}
   footer .brand{font-family:var(--mono);color:var(--textPrimary);font-weight:600;margin-bottom:8px;display:block;}
+  footer .build-version{font-family:var(--mono);color:var(--textSecondary);font-weight:400;}
 
   @media (max-width:860px){
     aside.detail-panel{position:static;width:auto;max-width:none;margin:16px 24px 24px;box-shadow:none;}
@@ -522,6 +529,10 @@
       <div class="diagram-layout">
         <div class="diagram-main">
           <h3 class="diagram-title">Schemazeichnung</h3>
+          <div class="flow-toggle" role="group" aria-label="Energiefluss: Tageszeit">
+            <button type="button" class="btn-toggle" id="flowTagBtn" aria-pressed="true">Tag</button>
+            <button type="button" class="btn-toggle" id="flowNachtBtn" aria-pressed="false">Nacht</button>
+          </div>
           <figure>
             <p class="scroll-hint">← Schema ist breiter als der Bildschirm — zum Scrollen wischen →</p>
             <div class="diagram-scroll">
@@ -625,7 +636,7 @@
 
 <footer>
   <div class="page">
-    <span class="brand">GWL-Design</span>
+    <span class="brand">GWL-Design <span class="build-version">· Build 10009</span></span>
     <p>
       Photovoltaik, Speicher und Mieterstrom aus einer Hand. Diese Seite erklärt das
       allgemeine Funktionsprinzip; die konkrete Auslegung Ihrer Anlage hängt vom jeweiligen
@@ -669,6 +680,7 @@
     hak: { title:"Hausanschlusskasten (HAK)", badges:[], text:"Hier kommt der Strom vom öffentlichen Netz ins Gebäude. Ab diesem Punkt gehört die Anlage dem Hauseigentümer – die sogenannte Eigentumsgrenze." },
     "msb-zaehler": { title:"Zähler Messstellenbetreiber", badges:["mid"], text:"Dieser Zähler gehört dem Messstellenbetreiber – nicht GWL oder dem Eigentümer. Er ist ein Zweirichtungszähler: Er misst sowohl den Strombezug aus dem Netz als auch die Einspeisung von PV-Überschuss, offiziell an der Grundstücksgrenze. Das ist die rechtlich bindende Grundlage für die Abrechnung mit dem Netzbetreiber. Der Hauptzähler darunter dient zusätzlich der internen Aufteilung im Haus." },
     hauptzaehler: { title:"Hauptzähler", badges:["mid"], text:"Ist ebenfalls ein Zweirichtungszähler und misst den gesamten Strom zwischen Haus und interner Verteilung – Bezug aus dem Netz und Einspeisung von PV-Überschuss. Bis 50 A / 44 A Dauerleistung reicht ein normaler, direkt messender Zähler." },
+    smartmeter: { title:"Smartmeter", badges:["mid"], text:"Misst zweirichtungsfähig die gemeinsame Energie aus PV-Anlage und Batteriespeicher, die über den Wechselrichter Richtung Hausverteilung fließt – getrennt von der Netz-/Einspeisemessung am Hauptzähler." },
     wandlerschrank: { title:"Zentraler Wandlerschrank", badges:["mid"], text:"Ab etwa 50 A oder 30 kVA reicht ein normaler Zähler nicht mehr aus. Ein Wandlerzähler misst dann über sogenannte Stromwandler – Bauteile, die auch sehr hohe Ströme sicher und genau erfassen, ohne den vollen Strom durch den Zähler selbst zu leiten. Auch er ist ein Zweirichtungszähler (Bezug und Einspeisung)." },
     pv: { title:"PV-Module", badges:[], text:"Die Solarmodule auf dem Dach wandeln Sonnenlicht in Gleichstrom (DC) um. Von dort fließt der Strom zum Wechselrichter." },
     wechselrichter: { title:"Wechselrichter", badges:[], text:"Macht aus dem Gleichstrom (DC) der PV-Module Wechselstrom (AC), den das Haus nutzen kann. Ein Hybrid-Wechselrichter steuert zusätzlich den angeschlossenen Batteriespeicher." },
@@ -689,7 +701,7 @@
   };
 
   var badgeLabel = { mid:"MID-geeicht", ems:"Energiemanager" };
-  var genericKeys = { mieterzaehler:true, wohnung:true, waermepumpe:true, "waermepumpe-verbrauch":true, sonstiges:true, "sonstiges-verbrauch":true, lis:true, "lis-verbrauch":true, "msb-zaehler":true, hauptzaehler:true, wandlerschrank:true };
+  var genericKeys = { mieterzaehler:true, wohnung:true, waermepumpe:true, "waermepumpe-verbrauch":true, sonstiges:true, "sonstiges-verbrauch":true, lis:true, "lis-verbrauch":true, "msb-zaehler":true, hauptzaehler:true, wandlerschrank:true, smartmeter:true };
 
   var titleEl = document.getElementById('detail-title');
   var textEl = document.getElementById('detail-text');
@@ -714,6 +726,215 @@
   // ---------------- Konfigurator: zeichnet das Schema live neu ----------------
   var state = { wohnungen:2, speicher:1, waermepumpe:0, lis:1, sonstiges:0 };
   var limits = { wohnungen:[1,20], waermepumpe:[0,5], lis:[0,10], sonstiges:[0,5] };
+  // Energiefluss-Anzeige (Tag/Nacht-Umschalter über dem Schema): welche Leitungs-Segmente
+  // (per data-flow markiert, siehe render()) gerade als "fließend" animiert werden.
+  var flowMode = 'tag';
+  var flowTagBtn = document.getElementById('flowTagBtn');
+  var flowNachtBtn = document.getElementById('flowNachtBtn');
+  function setFlowMode(mode){
+    flowMode = mode;
+    flowTagBtn.setAttribute('aria-pressed', mode === 'tag' ? 'true' : 'false');
+    flowNachtBtn.setAttribute('aria-pressed', mode === 'nacht' ? 'true' : 'false');
+    updateFlowDisplay();
+    scheduleDayNightAuto();
+  }
+  flowTagBtn.addEventListener('click', function(){ setFlowMode('tag'); });
+  flowNachtBtn.addEventListener('click', function(){ setFlowMode('nacht'); });
+  // Sonne/Mond wechseln automatisch alle 20 Sekunden (Tag/Nacht). Ein manueller Klick auf
+  // einen der Buttons setzt diesen Timer einfach neu auf — läuft von dort aus weiter.
+  var dayNightTimer = null;
+  function scheduleDayNightAuto(){
+    if(dayNightTimer) clearTimeout(dayNightTimer);
+    dayNightTimer = setTimeout(function(){
+      setFlowMode(flowMode === 'tag' ? 'nacht' : 'tag');
+    }, 20000);
+  }
+  scheduleDayNightAuto();
+  function updateFlowDisplay(){
+    // Tag: PV erzeugt, fließt über den Wechselrichter zur Hauptverteilung. Nacht ohne
+    // Speicher: Strom kommt vom Netz. Nacht mit Speicher: Strom kommt aus dem Speicher,
+    // ebenfalls über den (bidirektionalen) Wechselrichter.
+    var active = flowMode === 'tag'
+      ? ['pv-panel', 'wr-bus']
+      : (state.speicher > 0 ? ['speicher-dc', 'wr-bus'] : ['netz']);
+    var colors = { netz:'#58A6FF', 'pv-panel':'#2DA44E', 'wr-bus':'#2DA44E', 'speicher-dc':'#2DA44E' };
+    document.querySelectorAll('#configSvg [data-flow]').forEach(function(el){
+      var flow = el.getAttribute('data-flow');
+      var isActive = active.indexOf(flow) !== -1;
+      el.classList.toggle('flow-active', isActive);
+      el.style.stroke = isActive ? colors[flow] : '';
+    });
+    document.querySelectorAll('#configSvg [data-daynight]').forEach(function(el){
+      var isSun = el.getAttribute('data-daynight') === 'sun';
+      el.style.display = (isSun === (flowMode === 'tag')) ? '' : 'none';
+    });
+  }
+
+  // ---------------- Energiefluss-Simulation (Energiebälle) ----------------
+  // Kleiner Ausschnitt zum Testen des Prinzips: Quelle (PV/Netz/Speicher) fließt zur
+  // Hauptverteilung, die als Pool mit fester Kapazität wirkt (Bälle "sammeln" sich dort).
+  // Ein zufälliger Verbraucher (Allgemeinstrom oder Wohnung 1) holt sich in zufälligen
+  // Abständen einen Ball ab, der Zähler zählt dabei die verbrauchte Energie hoch. Ist der
+  // Pool voll und es kommt PV-Überschuss nach, fließt der Ball sichtbar zurück Richtung
+  // Netz (Einspeisung).
+  // Läuft komplett neu an, sobald render() das Schema neu aufbaut (Konfigurationsänderung
+  // wischt den kompletten SVG-Inhalt und damit auch alle Bälle/Zählerstände) — bewusste
+  // Vereinfachung für diesen ersten Test-Ausschnitt.
+  var FLOW_SPEED = 160; // px/s, konstante Geschwindigkeit über alle Streckenabschnitte
+  var flowSim = {
+    layer:null, coords:null, capacity:7, pool:[],
+    sourceCounts:{pv:0, speicher:0, netz:0, einspeisung:0},
+    spawnTimer:null, consumeTimer:null
+  };
+  var flowGeneration = 0;
+
+  function flowBall(color){
+    var c = svgNode('circle', {r:'5', fill:color, stroke:'rgba(0,0,0,.35)', 'stroke-width':'1'});
+    c.style.transition = 'cx .2s linear, cy .2s linear';
+    return c;
+  }
+  function moveAlong(el, points, i, onDone){
+    if(i >= points.length){ if(onDone) onDone(); return; }
+    if(i === 0){
+      el.setAttribute('cx', points[0].x); el.setAttribute('cy', points[0].y);
+      moveAlong(el, points, 1, onDone);
+      return;
+    }
+    var prev = points[i-1], p = points[i];
+    var dist = Math.hypot(p.x-prev.x, p.y-prev.y);
+    var dur = Math.max(150, dist / FLOW_SPEED * 1000);
+    el.style.transitionDuration = dur + 'ms';
+    el.setAttribute('cx', p.x); el.setAttribute('cy', p.y);
+    setTimeout(function(){ moveAlong(el, points, i+1, onDone); }, dur);
+  }
+  function poolSlotPoint(idx){
+    var c = flowSim.coords, gap = 22;
+    var startX = c.busCenterX - (flowSim.capacity-1)*gap/2;
+    return { x: startX + idx*gap, y: c.busBarCenterY };
+  }
+  function firstEmptySlot(){
+    for(var i=0; i<flowSim.capacity; i++){ if(!flowSim.pool[i]) return i; }
+    return -1;
+  }
+  function spawnSourceBall(){
+    var c = flowSim.coords;
+    if(!c) return;
+    var gen = flowGeneration;
+    var useSpeicher = flowMode === 'nacht' && state.speicher > 0;
+    var slot = firstEmptySlot();
+    if(slot === -1){
+      if(flowMode === 'tag'){ spawnOverflowBall(); }
+      return;
+    }
+    var color, points, sourceType;
+    if(flowMode === 'tag'){
+      sourceType = 'pv'; color = '#E3A008';
+      points = [
+        {x:c.pvCenter, y:c.pvModBottom}, {x:c.pvCenter, y:c.wrY},
+        {x:c.pvCenter, y:c.wrBottom}, {x:c.pvCenter, y:c.smY}, {x:c.pvCenter, y:c.smBottom},
+        {x:c.pvCenter, y:c.busBarTop}, poolSlotPoint(slot)
+      ];
+    } else if(useSpeicher){
+      sourceType = 'speicher'; color = '#E3A008';
+      points = [
+        {x:c.speicherCenter-c.speicherHalfW, y:c.speicherLineY}, {x:c.pvCenter, y:c.speicherLineY},
+        {x:c.pvCenter, y:c.wrBottom}, {x:c.pvCenter, y:c.smY}, {x:c.pvCenter, y:c.smBottom},
+        {x:c.pvCenter, y:c.busBarTop}, poolSlotPoint(slot)
+      ];
+    } else {
+      sourceType = 'netz'; color = '#58A6FF';
+      points = [
+        {x:c.spineCenter, y:c.netzBottom}, {x:c.spineCenter, y:c.hakY},
+        {x:c.spineCenter, y:c.hakBottom}, {x:c.spineCenter, y:c.zaehlerY},
+        {x:c.spineCenter, y:c.zaehlerBottom}, {x:c.spineCenter, y:c.hauptY},
+        {x:c.spineCenter, y:c.hauptBottom}, {x:c.spineCenter, y:c.busBarTop},
+        poolSlotPoint(slot)
+      ];
+    }
+    var el = flowBall(color);
+    flowSim.layer.appendChild(el);
+    flowSim.pool[slot] = { el:el, sourceType:sourceType };
+    moveAlong(el, points, 0, function(){
+      if(gen !== flowGeneration) return;
+      flowSim.sourceCounts[sourceType]++;
+      var label = document.getElementById('flowCount-' + sourceType);
+      if(label){
+        // Hauptzähler zählt Netz-Bezug negativ (Zweirichtungszähler); Smartmeter (PV/Sp)
+        // zählt schlicht positiv, da es keine Einspeisung misst.
+        var prefix = sourceType === 'pv' ? 'PV ' : (sourceType === 'speicher' ? 'Sp ' : 'Netz -');
+        label.textContent = prefix + flowSim.sourceCounts[sourceType];
+      }
+    });
+  }
+  function spawnOverflowBall(){
+    var c = flowSim.coords;
+    var gen = flowGeneration;
+    var el = flowBall('#E3A008');
+    flowSim.layer.appendChild(el);
+    var start = poolSlotPoint(flowSim.capacity-1);
+    var points = [
+      start, {x:c.spineCenter, y:c.busBarTop}, {x:c.spineCenter, y:c.hauptBottom},
+      {x:c.spineCenter, y:c.hauptY}, {x:c.spineCenter, y:c.zaehlerBottom},
+      {x:c.spineCenter, y:c.zaehlerY}, {x:c.spineCenter, y:c.hakBottom},
+      {x:c.spineCenter, y:c.hakY}, {x:c.spineCenter, y:c.netzBottom}
+    ];
+    moveAlong(el, points, 0, function(){
+      if(gen !== flowGeneration) return;
+      el.remove();
+      // PV-Überschuss, der über den Hauptzähler ins Netz zurückfließt (Einspeisung, positiv).
+      flowSim.sourceCounts.einspeisung++;
+      var label = document.getElementById('flowCount-einspeisung');
+      if(label) label.textContent = 'PV +' + flowSim.sourceCounts.einspeisung;
+    });
+  }
+  function consumeFromPool(){
+    var c = flowSim.coords;
+    if(!c) return;
+    var gen = flowGeneration;
+    var occupied = [];
+    for(var i=0; i<flowSim.capacity; i++){ if(flowSim.pool[i]) occupied.push(i); }
+    if(occupied.length === 0) return;
+    if(!c.targets || c.targets.length === 0) return;
+    var slot = occupied[Math.floor(Math.random()*occupied.length)];
+    var ball = flowSim.pool[slot];
+    flowSim.pool[slot] = null;
+    var target = c.targets[Math.floor(Math.random()*c.targets.length)];
+    var points = [poolSlotPoint(slot)].concat(target.path);
+    // Herkunft entscheidet, welcher der beiden Zähler am Ziel hochgezählt wird: Speicher-
+    // Energie stammt ursprünglich von der PV und zählt deshalb mit zum PV-Wert.
+    var bucket = ball.sourceType === 'netz' ? 'netz' : 'pv';
+    moveAlong(ball.el, points, 0, function(){
+      if(gen !== flowGeneration) return;
+      ball.el.remove();
+      target[bucket + 'Count'] = (target[bucket + 'Count'] || 0) + 1;
+      var label = document.getElementById(bucket === 'pv' ? target.pvId : target.netzId);
+      if(label) label.textContent = (bucket === 'pv' ? 'PV ' : 'N ') + target[bucket + 'Count'];
+    });
+  }
+  function scheduleSpawn(){
+    flowSim.spawnTimer = setTimeout(function(){ spawnSourceBall(); scheduleSpawn(); }, 1000 + Math.random()*1000);
+  }
+  function scheduleConsume(){
+    flowSim.consumeTimer = setTimeout(function(){ consumeFromPool(); scheduleConsume(); }, 1800 + Math.random()*1800);
+  }
+  function stopFlowSim(){
+    flowGeneration++;
+    if(flowSim.spawnTimer) clearTimeout(flowSim.spawnTimer);
+    if(flowSim.consumeTimer) clearTimeout(flowSim.consumeTimer);
+    if(flowSim.layer) flowSim.layer.remove();
+    flowSim.pool = [];
+    flowSim.sourceCounts = { pv:0, speicher:0, netz:0, einspeisung:0 };
+  }
+  function startFlowSim(coords){
+    stopFlowSim();
+    flowSim.coords = coords;
+    var svg = document.getElementById('configSvg');
+    flowSim.layer = svgNode('g', {'aria-hidden':'true'});
+    svg.appendChild(flowSim.layer);
+    scheduleSpawn();
+    scheduleConsume();
+  }
+
   // Wärmepumpe & Sonstiges starten im Standard bei 0 (nur "+"-Button sichtbar) — siehe
   // updateAddableFields(). Sobald der Zähler > 0 ist, zeigt das Feld den normalen Stepper.
   var addableFields = ['waermepumpe', 'sonstiges'];
@@ -882,9 +1103,14 @@
       return tag;
     }
     var mainTag = nextZTag();
+    var smTag = nextZTag(); // Smartmeter (PV + Speicher), direkt nach dem Hauptzähler nummeriert
     // Sammelt die Mittelpunkte aller GWL-Zähler-Boxen — PlexLog wird am Ende per
     // Strichpunktlinie (Steuer-/Datenleitung, kein Strompfad) mit jedem davon verbunden.
     var meterCenters = [];
+    // Sammelt für jeden Verbraucher-Zähler Zielpunkt + Laufweg für die Energiefluss-
+    // Simulation (siehe startFlowSim()) — jeder Zähler bekommt eine eigene PV- und
+    // Netz-Anzeige, ein zufällig ankommender Ball zählt je nach Herkunft die passende hoch.
+    var flowTargets = [];
     sideColumns.forEach(function(col){ col.tag = nextZTag(); });
     mieterUnits.forEach(function(unit){
       unit.tag = nextZTag();
@@ -925,6 +1151,19 @@
     var hauptY = zaehlerBottom + gapChain;
     var hauptH = mainH;
     var hauptBottom = hauptY + hauptH;
+    // Smartmeter (PV + Speicher gemeinsam) übernimmt auf der PV-Achse genau die Zeile, in
+    // der bisher der Wechselrichter stand — Wechselrichter und PV-Module rücken dafür je
+    // eine Zeile weiter nach oben. So bleiben Hauptverteilung und alles darunter exakt an
+    // ihrer bisherigen Position (keine Verschiebung "nebenbei").
+    var smY = hauptY;
+    var smH = mainH;
+    var smBottom = hauptBottom;
+    var wrH = mainH;
+    var wrY = smY - gapChain - wrH;
+    var wrBottom = wrY + wrH;
+    var pvModH = 2*RASTER;
+    var pvModY = wrY - gapChain - pvModH;
+    var pvModBottom = pvModY + pvModH;
 
     var busBarHeight = RASTER * 2; // zwei Raster-Kästchen hoch
     var busBarCenterY = hauptBottom + gapChain + busBarHeight/2;
@@ -1017,15 +1256,18 @@
     svg.appendChild(defs);
 
     // Netzanschluss-Strang
-    svg.appendChild(connLine(spineCenter,netzBottom,spineCenter,hakY,{'stroke-width':'2','marker-start':'url(#arrC)'}));
-    svg.appendChild(connLine(spineCenter,hakBottom,spineCenter,zaehlerY,{'stroke-width':'2','marker-start':'url(#arrC)'}));
-    svg.appendChild(connLine(spineCenter,zaehlerBottom,spineCenter,hauptY,{'stroke-width':'2','marker-start':'url(#arrC)'}));
-    svg.appendChild(connLine(spineCenter,hauptBottom,spineCenter,busBarTop,{'stroke-width':'2','marker-start':'url(#arrC)'}));
-    svg.appendChild(connLine(pvCenter,zaehlerBottom,pvCenter,hauptY,{'stroke-width':'2'}));
-    svg.appendChild(connLine(pvCenter,hauptBottom,pvCenter,busBarTop,{'stroke-width':'2','marker-start':'url(#arrC)'}));
+    // data-flow markiert die Segmente, die für die Energiefluss-Anzeige (Tag/Nacht-Umschalter,
+    // siehe updateFlowDisplay()) ein- oder ausgeblendet werden.
+    svg.appendChild(connLine(spineCenter,netzBottom,spineCenter,hakY,{'stroke-width':'2','marker-start':'url(#arrC)','class':'flow-line','data-flow':'netz'}));
+    svg.appendChild(connLine(spineCenter,hakBottom,spineCenter,zaehlerY,{'stroke-width':'2','marker-start':'url(#arrC)','class':'flow-line','data-flow':'netz'}));
+    svg.appendChild(connLine(spineCenter,zaehlerBottom,spineCenter,hauptY,{'stroke-width':'2','marker-start':'url(#arrC)','class':'flow-line','data-flow':'netz'}));
+    svg.appendChild(connLine(spineCenter,hauptBottom,spineCenter,busBarTop,{'stroke-width':'2','marker-start':'url(#arrC)','class':'flow-line','data-flow':'netz'}));
+    svg.appendChild(connLine(pvCenter,pvModBottom,pvCenter,wrY,{'stroke-width':'2','class':'flow-line','data-flow':'pv-panel'}));
+    svg.appendChild(connLine(pvCenter,wrBottom,pvCenter,smY,{'stroke-width':'2','marker-start':'url(#arrC)','class':'flow-line','data-flow':'wr-bus'}));
+    svg.appendChild(connLine(pvCenter,smBottom,pvCenter,busBarTop,{'stroke-width':'2','marker-start':'url(#arrC)','class':'flow-line','data-flow':'wr-bus'}));
     if(showSpeicher){
-      var speicherLineY = hauptY + hauptH/2;
-      svg.appendChild(connLine(pvCenter+mainHalfW,speicherLineY, speicherCenter-speicherHalfW,speicherLineY, {'stroke-width':'1.6', 'marker-start':'url(#arrC)', 'marker-end':'url(#arrC)'}));
+      var speicherLineY = wrY + wrH/2;
+      svg.appendChild(connLine(pvCenter+mainHalfW,speicherLineY, speicherCenter-speicherHalfW,speicherLineY, {'stroke-width':'1.6', 'marker-start':'url(#arrC)', 'marker-end':'url(#arrC)', 'class':'flow-line', 'data-flow':'speicher-dc'}));
       svg.appendChild(svgText((pvCenter+mainHalfW+speicherCenter-speicherHalfW)/2, speicherLineY-8, 'DC', {'font-size':'9.5', fill:'#8B949E'}));
     }
 
@@ -1045,25 +1287,40 @@
     var mainKey = isLarge ? 'wandlerschrank' : 'hauptzaehler';
     var mainAria = (isLarge ? 'Zentraler Wandlerschrank' : 'Hauptzähler') + ' ' + mainTag;
     svg.appendChild(makeNode(mainKey, mainAria, 'mid', {x:spineCenter-mainHalfW,y:hauptY,width:mainW,height:hauptH}, [
-      {y:hauptY+26, content: isLarge ? 'Wandlerschrank' : 'Hauptzähler', size:'12.5'},
-      {y:hauptY+42, content: mainTag, size:'10.5', weight:'400', fill:'#8B949E', mono:true}
+      {y:hauptY+17, content: isLarge ? 'Wandlerschrank' : 'Hauptzähler', size:'11'},
+      {y:hauptY+29, content: mainTag, size:'9', weight:'400', fill:'#8B949E', mono:true}
     ]));
+    // Der Hauptzähler ist ein Zweirichtungszähler: negativ = Bezug vom Netz, positiv =
+    // Einspeisung von PV-Überschuss (siehe spawnOverflowBall() in der Energiefluss-
+    // Simulation, startFlowSim()).
+    svg.appendChild(svgText(spineCenter-40, hauptY+43, 'Netz -0', {'font-size':'8.5', fill:'#58A6FF', 'font-family':'var(--mono)', id:'flowCount-netz'}));
+    svg.appendChild(svgText(spineCenter+40, hauptY+43, 'PV +0', {'font-size':'8.5', fill:'#E3A008', 'font-family':'var(--mono)', id:'flowCount-einspeisung'}));
     meterCenters.push({x:spineCenter, y:hauptY+hauptH/2}); // gleiche Zeile wie PlexLog, direkte Linie ohne Umweg
 
-    svg.appendChild(makeNode('pv','PV-Module','erzeuger', {x:pvCenter-mainHalfW,y:zaehlerY,width:mainW,height:2*RASTER}, [
-      {y:zaehlerY+18, content:'PV-Module', size:'12.5'},
-      {y:zaehlerY+32, content:'Gleichstrom (DC)', size:'9.5', weight:'400', fill:'#8B949E'}
+    svg.appendChild(makeNode('pv','PV-Module','erzeuger', {x:pvCenter-mainHalfW,y:pvModY,width:mainW,height:pvModH}, [
+      {y:pvModY+18, content:'PV-Module', size:'12.5'},
+      {y:pvModY+32, content:'Gleichstrom (DC)', size:'9.5', weight:'400', fill:'#8B949E'}
     ]));
-    svg.appendChild(makeNode('wechselrichter','Wechselrichter','erzeuger', {x:pvCenter-mainHalfW,y:hauptY,width:mainW,height:hauptH}, [
-      {y:hauptY+26, content:'Wechselrichter', size:'12.5'},
-      {y:hauptY+42, content:'DC → AC', size:'10.5', weight:'400', fill:'#8B949E'}
+    svg.appendChild(makeNode('wechselrichter','Wechselrichter','erzeuger', {x:pvCenter-mainHalfW,y:wrY,width:mainW,height:wrH}, [
+      {y:wrY+26, content:'Wechselrichter', size:'12.5'},
+      {y:wrY+42, content:'DC → AC', size:'10.5', weight:'400', fill:'#8B949E'}
     ]));
     if(showSpeicher){
-      svg.appendChild(makeNode('speicher','Batteriespeicher','erzeuger', {x:speicherCenter-speicherHalfW,y:hauptY,width:2*speicherHalfW,height:hauptH}, [
-        {y:hauptY+26, content:'Speicher', size:'12.5'},
-        {y:hauptY+42, content:'DC-gekoppelt', size:'10', weight:'400', fill:'#8B949E'}
+      svg.appendChild(makeNode('speicher','Batteriespeicher','erzeuger', {x:speicherCenter-speicherHalfW,y:wrY,width:2*speicherHalfW,height:wrH}, [
+        {y:wrY+26, content:'Speicher', size:'12.5'},
+        {y:wrY+42, content:'DC-gekoppelt', size:'10', weight:'400', fill:'#8B949E'}
       ]));
     }
+
+    // Smartmeter: eigenständiges GWL-Zählerfeld auf der PV/Wechselrichter-Achse, misst
+    // (zweirichtungsfähig) die gemeinsame Energie aus PV und Speicher Richtung Hausverteilung.
+    svg.appendChild(makeNode('smartmeter', 'Smartmeter ' + smTag, 'mid', {x:pvCenter-mainHalfW,y:smY,width:mainW,height:smH}, [
+      {y:smY+17, content:'Smartmeter', size:'11'},
+      {y:smY+29, content:smTag, size:'9', weight:'400', fill:'#8B949E', mono:true}
+    ]));
+    svg.appendChild(svgText(pvCenter-40, smY+43, 'PV 0', {'font-size':'8.5', fill:'#E3A008', 'font-family':'var(--mono)', id:'flowCount-pv'}));
+    svg.appendChild(svgText(pvCenter+40, smY+43, 'Sp 0', {'font-size':'8.5', fill:'#2DA44E', 'font-family':'var(--mono)', id:'flowCount-speicher'}));
+    meterCenters.push({x:pvCenter, y:smY+smH/2});
 
     // Steg der Hauptverteilung reicht durchgängig bis zur Mieter/LIS-Schiene (keine
     // Unterbrechung). Da keine Zählerspalte auf der Steg-Achse liegt (siehe sideColumns
@@ -1074,9 +1331,17 @@
       var cx = col.cx;
       svg.appendChild(connLine(cx,busBarBottom,cx,colTop));
       svg.appendChild(connLine(cx,colBottom,cx,colEnduseTop));
+      // Jeder Zähler bekommt eine eigene PV-/Netz-Anzeige für die Energiefluss-Simulation
+      // (siehe startFlowSim()).
       svg.appendChild(makeNode(col.key, col.ariaMeter, 'mid', {x:cx-colW/2,y:colTop,width:colW,height:colH}, [
-        {y:colTop+colH/2, content:col.tag, size:'12.5', mono:true}
+        {y:colTop+15, content:col.tag, size:'11', mono:true}
       ]));
+      svg.appendChild(svgText(cx-26, colTop+30, 'PV 0', {'font-size':'8', fill:'#E3A008', 'font-family':'var(--mono)', id:'flowCount-pv-'+col.tag}));
+      svg.appendChild(svgText(cx+26, colTop+30, 'N 0', {'font-size':'8', fill:'#58A6FF', 'font-family':'var(--mono)', id:'flowCount-netz-'+col.tag}));
+      flowTargets.push({ pvId:'flowCount-pv-'+col.tag, netzId:'flowCount-netz-'+col.tag, path:[
+        {x:cx, y:busBarBottom}, {x:cx, y:colTop}, {x:cx, y:colTop+colH/2},
+        {x:cx, y:colBottom}, {x:cx, y:colEnduseTop+colEnduseH/2}
+      ]});
       // dispatchY: freie Lücke zwischen Hauptverteilung und Spaltenreihe — die PlexLog-Linie
       // biegt dort ab, statt quer durch Hauptzähler/Wechselrichter zu fahren (Vorgaben-Review).
       meterCenters.push({x:cx, y:colTop+colH/2, dispatchY:colTop-RASTER});
@@ -1095,8 +1360,14 @@
       svg.appendChild(connLine(railX-stemHalfW,rowY, mieterChipX+chipW,rowY));
       svg.appendChild(connLine(mieterChipX,rowY, mieterEnduseX+enduseW,rowY));
       svg.appendChild(makeNode(unit.key, unit.ariaMeter, 'mid', {x:mieterChipX,y:rowY-chipH/2,width:chipW,height:chipH}, [
-        {y:rowY+4, content:unit.tag, size:'11', mono:true}
+        {y:rowY-3, content:unit.tag, size:'10', mono:true}
       ]));
+      svg.appendChild(svgText(mieterChipX+chipW/2-16, rowY+11, 'PV 0', {'font-size':'7', fill:'#E3A008', 'font-family':'var(--mono)', id:'flowCount-pv-'+unit.tag}));
+      svg.appendChild(svgText(mieterChipX+chipW/2+16, rowY+11, 'N 0', {'font-size':'7', fill:'#58A6FF', 'font-family':'var(--mono)', id:'flowCount-netz-'+unit.tag}));
+      flowTargets.push({ pvId:'flowCount-pv-'+unit.tag, netzId:'flowCount-netz-'+unit.tag, path:[
+        {x:railX, y:colEnduseTop+colEnduseH}, {x:railX, y:rowY},
+        {x:mieterChipX+chipW, y:rowY}, {x:mieterChipX, y:rowY}, {x:mieterEnduseX+enduseW/2, y:rowY}
+      ]});
       // dispatchY: freie Lücke oberhalb dieser Zeile (zwischen den Reihen), damit die
       // PlexLog-Linie nicht durch "Wohnung N" oder andere Zeilen läuft (Vorgaben-Review).
       meterCenters.push({x:mieterChipX+chipW/2, y:rowY, dispatchY:rowY-rowPitch/2});
@@ -1110,13 +1381,40 @@
       svg.appendChild(connLine(railX+stemHalfW,rowY, lisChipX,rowY));
       svg.appendChild(connLine(lisChipX+chipW,rowY, lisEnduseX,rowY));
       svg.appendChild(makeNode(unit.key, unit.ariaMeter, 'mid', {x:lisChipX,y:rowY-chipH/2,width:chipW,height:chipH}, [
-        {y:rowY+4, content:unit.tag, size:'11', mono:true}
+        {y:rowY-3, content:unit.tag, size:'10', mono:true}
       ]));
+      svg.appendChild(svgText(lisChipX+chipW/2-16, rowY+11, 'PV 0', {'font-size':'7', fill:'#E3A008', 'font-family':'var(--mono)', id:'flowCount-pv-'+unit.tag}));
+      svg.appendChild(svgText(lisChipX+chipW/2+16, rowY+11, 'N 0', {'font-size':'7', fill:'#58A6FF', 'font-family':'var(--mono)', id:'flowCount-netz-'+unit.tag}));
+      flowTargets.push({ pvId:'flowCount-pv-'+unit.tag, netzId:'flowCount-netz-'+unit.tag, path:[
+        {x:railX, y:colEnduseTop+colEnduseH}, {x:railX, y:rowY},
+        {x:lisChipX, y:rowY}, {x:lisChipX+chipW, y:rowY}, {x:lisEnduseX+enduseW/2, y:rowY}
+      ]});
       meterCenters.push({x:lisChipX+chipW/2, y:rowY, dispatchY:rowY-rowPitch/2});
       svg.appendChild(makeNode(unit.enduseKey, unit.ariaEnduse, 'neutral', {x:lisEnduseX,y:rowY-enduseH/2,width:enduseW,height:enduseH}, [
         {y:rowY+3, content:unit.enduseLabel, size:'10'}
       ]));
     });
+
+    // Sonne/Mond: zeigt die Tageszeit der Energiefluss-Simulation an (siehe
+    // updateFlowDisplay() und scheduleDayNightAuto() — wechselt automatisch alle 20s).
+    var sunMoonCx = plexLeft + plexW/2, sunMoonCy = (netzY + zaehlerBottom)/2;
+    var sunMoonGroup = svgNode('g', {'aria-hidden':'true'});
+    var sunGroup = svgNode('g', {'data-daynight':'sun'});
+    sunGroup.appendChild(svgNode('circle', {cx:sunMoonCx, cy:sunMoonCy, r:'16', fill:'#E3A008'}));
+    for(var ray=0; ray<8; ray++){
+      var rayAngle = ray * Math.PI/4;
+      sunGroup.appendChild(svgNode('line', {
+        x1:sunMoonCx+Math.cos(rayAngle)*21, y1:sunMoonCy+Math.sin(rayAngle)*21,
+        x2:sunMoonCx+Math.cos(rayAngle)*29, y2:sunMoonCy+Math.sin(rayAngle)*29,
+        stroke:'#E3A008', 'stroke-width':'3', 'stroke-linecap':'round'
+      }));
+    }
+    sunMoonGroup.appendChild(sunGroup);
+    var moonGroup = svgNode('g', {'data-daynight':'moon'});
+    moonGroup.appendChild(svgNode('circle', {cx:sunMoonCx, cy:sunMoonCy, r:'18', fill:'#58A6FF'}));
+    moonGroup.appendChild(svgNode('circle', {cx:sunMoonCx+9, cy:sunMoonCy-4, r:'15', fill:'var(--bg)'}));
+    sunMoonGroup.appendChild(moonGroup);
+    svg.appendChild(sunMoonGroup);
 
     svg.appendChild(makeNode('plexlog','PlexLog Energiemanager','ems', {x:plexLeft,y:hauptY,width:plexW,height:plexH}, [
       {y:hauptY+26, content:'PlexLog', size:'12.5', weight:'700'},
@@ -1187,6 +1485,16 @@
       : 'Hauptmessung über einfachen Hauptzähler ' + mainTag + '.';
     schemaCaption.textContent = 'Ihre Auswahl: ' + parts.join(', ') + '. ' + meterNote;
 
+    updateFlowDisplay();
+    startFlowSim({
+      busCenterX: symmetryX, pvCenter: pvCenter, spineCenter: spineCenter,
+      busBarTop: busBarTop, busBarBottom: busBarBottom, busBarCenterY: busBarCenterY,
+      zaehlerBottom: zaehlerBottom, hauptY: hauptY, hauptBottom: hauptBottom, smY: smY, smBottom: smBottom,
+      pvModBottom: pvModBottom, wrY: wrY, wrBottom: wrBottom,
+      netzBottom: netzBottom, hakY: hakY, hakBottom: hakBottom, zaehlerY: zaehlerY,
+      speicherCenter: speicherCenter, speicherHalfW: speicherHalfW, speicherLineY: wrY+wrH/2,
+      targets: flowTargets
+    });
     if(!centeringInProgress){ centerDiagramOnViewport(); }
   }
 
