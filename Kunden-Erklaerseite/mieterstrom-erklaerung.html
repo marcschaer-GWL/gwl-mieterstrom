@@ -751,12 +751,14 @@
   }
   scheduleDayNightAuto();
   function updateFlowDisplay(){
-    // Tag: PV erzeugt, fließt über den Wechselrichter zur Hauptverteilung. Nacht ohne
-    // Speicher: Strom kommt vom Netz. Nacht mit Speicher: Strom kommt aus dem Speicher,
-    // ebenfalls über den (bidirektionalen) Wechselrichter.
+    // Tag: PV erzeugt, fließt über den Wechselrichter zur Hauptverteilung UND lädt den
+    // Speicher (siehe spawnChargeBall()). Nacht: solange der Speicher noch Ladung hat
+    // (speicherCharge > 0), kommt der Strom von dort, danach ist er "leer" und der Strom
+    // kommt vom Netz.
+    var nachtSpeicherAktiv = state.speicher > 0 && flowSim.speicherCharge > 0;
     var active = flowMode === 'tag'
       ? ['pv-panel', 'wr-bus']
-      : (state.speicher > 0 ? ['speicher-dc', 'wr-bus'] : ['netz']);
+      : (nachtSpeicherAktiv ? ['speicher-dc', 'wr-bus'] : ['netz']);
     var colors = { netz:'#58A6FF', 'pv-panel':'#2DA44E', 'wr-bus':'#2DA44E', 'speicher-dc':'#2DA44E' };
     document.querySelectorAll('#configSvg [data-flow]').forEach(function(el){
       var flow = el.getAttribute('data-flow');
@@ -781,10 +783,11 @@
   // wischt den kompletten SVG-Inhalt und damit auch alle Bälle/Zählerstände) — bewusste
   // Vereinfachung für diesen ersten Test-Ausschnitt.
   var FLOW_SPEED = 160; // px/s, konstante Geschwindigkeit über alle Streckenabschnitte
+  var SPEICHER_NIGHT_LIMIT = 10; // maximale Speicher-"Ladung" in Bällen (Gauge-Punkte)
   var flowSim = {
     layer:null, coords:null, capacity:7, pool:[],
     sourceCounts:{pv:0, speicher:0, netz:0, einspeisung:0},
-    spawnTimer:null, consumeTimer:null
+    spawnTimer:null, consumeTimer:null, chargeTimer:null, speicherCharge:0
   };
   var flowGeneration = 0;
 
@@ -792,6 +795,17 @@
     var c = svgNode('circle', {r:'5', fill:color, stroke:'rgba(0,0,0,.35)', 'stroke-width':'1'});
     c.style.transition = 'cx .2s linear, cy .2s linear';
     return c;
+  }
+  function speicherDotPoint(idx){
+    var c = flowSim.coords, gap = 12;
+    var startX = c.speicherCenter - (SPEICHER_NIGHT_LIMIT-1)*gap/2;
+    return { x: startX + idx*gap, y: c.speicherGaugeY };
+  }
+  function setGaugeDot(idx, filled){
+    var dot = document.getElementById('speicherGaugeDot-' + idx);
+    if(!dot) return;
+    dot.style.fill = filled ? '#E3A008' : 'none';
+    dot.style.stroke = filled ? 'rgba(0,0,0,.35)' : 'rgba(139,148,158,.5)';
   }
   function moveAlong(el, points, i, onDone){
     if(i >= points.length){ if(onDone) onDone(); return; }
@@ -820,7 +834,7 @@
     var c = flowSim.coords;
     if(!c) return;
     var gen = flowGeneration;
-    var useSpeicher = flowMode === 'nacht' && state.speicher > 0;
+    var useSpeicher = flowMode === 'nacht' && state.speicher > 0 && flowSim.speicherCharge > 0;
     var slot = firstEmptySlot();
     if(slot === -1){
       if(flowMode === 'tag'){ spawnOverflowBall(); }
@@ -835,9 +849,14 @@
         {x:c.pvCenter, y:c.busBarTop}, poolSlotPoint(slot)
       ];
     } else if(useSpeicher){
+      var dischargeIdx = flowSim.speicherCharge - 1;
+      flowSim.speicherCharge--;
+      setGaugeDot(dischargeIdx, false);
+      if(flowSim.speicherCharge <= 0) updateFlowDisplay();
       sourceType = 'speicher'; color = '#E3A008';
+      var dischargeDot = speicherDotPoint(dischargeIdx);
       points = [
-        {x:c.speicherCenter-c.speicherHalfW, y:c.speicherLineY}, {x:c.pvCenter, y:c.speicherLineY},
+        dischargeDot, {x:dischargeDot.x, y:c.speicherLineY}, {x:c.pvCenter, y:c.speicherLineY},
         {x:c.pvCenter, y:c.wrBottom}, {x:c.pvCenter, y:c.smY}, {x:c.pvCenter, y:c.smBottom},
         {x:c.pvCenter, y:c.busBarTop}, poolSlotPoint(slot)
       ];
@@ -911,19 +930,45 @@
       if(label) label.textContent = (bucket === 'pv' ? 'PV ' : 'N ') + target[bucket + 'Count'];
     });
   }
+  function spawnChargeBall(){
+    // Tagsüber: PV-Überschuss lädt den Speicher, sichtbar als Punkt, der sich in der
+    // Ladestand-Anzeige unter dem Speicher-Symbol füllt (bis SPEICHER_NIGHT_LIMIT voll).
+    var c = flowSim.coords;
+    if(!c || flowMode !== 'tag' || state.speicher <= 0 || flowSim.speicherCharge >= SPEICHER_NIGHT_LIMIT) return;
+    var gen = flowGeneration;
+    var chargeIdx = flowSim.speicherCharge;
+    var chargeDot = speicherDotPoint(chargeIdx);
+    var el = flowBall('#E3A008');
+    flowSim.layer.appendChild(el);
+    var points = [
+      {x:c.pvCenter, y:c.pvModBottom}, {x:c.pvCenter, y:c.speicherLineY},
+      {x:chargeDot.x, y:c.speicherLineY}, chargeDot
+    ];
+    moveAlong(el, points, 0, function(){
+      if(gen !== flowGeneration) return;
+      el.remove();
+      flowSim.speicherCharge++;
+      setGaugeDot(chargeIdx, true);
+    });
+  }
   function scheduleSpawn(){
     flowSim.spawnTimer = setTimeout(function(){ spawnSourceBall(); scheduleSpawn(); }, 1000 + Math.random()*1000);
   }
   function scheduleConsume(){
     flowSim.consumeTimer = setTimeout(function(){ consumeFromPool(); scheduleConsume(); }, 1800 + Math.random()*1800);
   }
+  function scheduleCharge(){
+    flowSim.chargeTimer = setTimeout(function(){ spawnChargeBall(); scheduleCharge(); }, 2200 + Math.random()*2200);
+  }
   function stopFlowSim(){
     flowGeneration++;
     if(flowSim.spawnTimer) clearTimeout(flowSim.spawnTimer);
     if(flowSim.consumeTimer) clearTimeout(flowSim.consumeTimer);
+    if(flowSim.chargeTimer) clearTimeout(flowSim.chargeTimer);
     if(flowSim.layer) flowSim.layer.remove();
     flowSim.pool = [];
     flowSim.sourceCounts = { pv:0, speicher:0, netz:0, einspeisung:0 };
+    flowSim.speicherCharge = 0;
   }
   function startFlowSim(coords){
     stopFlowSim();
@@ -933,6 +978,7 @@
     svg.appendChild(flowSim.layer);
     scheduleSpawn();
     scheduleConsume();
+    scheduleCharge();
   }
 
   // Wärmepumpe & Sonstiges starten im Standard bei 0 (nur "+"-Button sichtbar) — siehe
@@ -1305,11 +1351,23 @@
       {y:wrY+26, content:'Wechselrichter', size:'12.5'},
       {y:wrY+42, content:'DC → AC', size:'10.5', weight:'400', fill:'#8B949E'}
     ]));
+    var speicherGaugeY = wrBottom + gapChain/2;
     if(showSpeicher){
       svg.appendChild(makeNode('speicher','Batteriespeicher','erzeuger', {x:speicherCenter-speicherHalfW,y:wrY,width:2*speicherHalfW,height:wrH}, [
         {y:wrY+26, content:'Speicher', size:'12.5'},
         {y:wrY+42, content:'DC-gekoppelt', size:'10', weight:'400', fill:'#8B949E'}
       ]));
+      // Ladestand-Anzeige: SPEICHER_NIGHT_LIMIT Punkte, die tagsüber von der PV gefüllt
+      // (spawnChargeBall()) und nachts wieder geleert werden (spawnSourceBall(), useSpeicher).
+      var gaugeGap = 12;
+      var gaugeStartX = speicherCenter - (SPEICHER_NIGHT_LIMIT-1)*gaugeGap/2;
+      for(var gi=0; gi<SPEICHER_NIGHT_LIMIT; gi++){
+        svg.appendChild(svgNode('circle', {
+          cx:gaugeStartX+gi*gaugeGap, cy:speicherGaugeY, r:'3.5',
+          fill:'none', stroke:'rgba(139,148,158,.5)', 'stroke-width':'1',
+          id:'speicherGaugeDot-'+gi
+        }));
+      }
     }
 
     // Smartmeter: eigenständiges GWL-Zählerfeld auf der PV/Wechselrichter-Achse, misst
@@ -1493,6 +1551,7 @@
       pvModBottom: pvModBottom, wrY: wrY, wrBottom: wrBottom,
       netzBottom: netzBottom, hakY: hakY, hakBottom: hakBottom, zaehlerY: zaehlerY,
       speicherCenter: speicherCenter, speicherHalfW: speicherHalfW, speicherLineY: wrY+wrH/2,
+      speicherGaugeY: speicherGaugeY,
       targets: flowTargets
     });
     if(!centeringInProgress){ centerDiagramOnViewport(); }
