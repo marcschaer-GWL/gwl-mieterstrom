@@ -958,7 +958,10 @@
     flowSim.consumeTimer = setTimeout(function(){ consumeFromPool(); scheduleConsume(); }, 1800 + Math.random()*1800);
   }
   function scheduleCharge(){
-    flowSim.chargeTimer = setTimeout(function(){ spawnChargeBall(); scheduleCharge(); }, 2200 + Math.random()*2200);
+    // Langsamer als scheduleSpawn: der Speicher füllt sich tagsüber nur teilweise, damit
+    // nachts nicht die ganze Nacht allein aus dem Speicher kommt, sondern auch das Netz
+    // sichtbar zum Einsatz kommt, sobald der Speicher leer ist.
+    flowSim.chargeTimer = setTimeout(function(){ spawnChargeBall(); scheduleCharge(); }, 4500 + Math.random()*4500);
   }
   function stopFlowSim(){
     flowGeneration++;
